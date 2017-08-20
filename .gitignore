@@ -1,9 +1,38 @@
+# Eclipse
+.classpath
+.project
+.settings
+eclipsebin
+
+# Ant
+bin
+gen
+build
+out
+lib
+
+# Maven
+target
+pom.xml.*
+release.properties
+coverage.ec
+
+# IntelliJ
+.idea
 *.iml
-.gradle
-/local.properties
-/.idea/workspace.xml
-/.idea/libraries
+*.iws
+*.ipr
+classes
+gen-external-apklibs
+
+# Robolectric
+tmp
+
 .DS_Store
-/build
-/captures
-.externalNativeBuild
+
+# Gradle
+.gradle
+jniLibs
+build
+local.properties
+reports
