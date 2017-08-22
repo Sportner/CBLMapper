@@ -1,4 +1,4 @@
-package io.sportner.cblmapper.bind;
+package io.sportner.cblmapper.bind.primitives;
 
 import com.couchbase.lite.Dictionary;
 import com.couchbase.lite.Document;
@@ -6,7 +6,7 @@ import com.couchbase.lite.Document;
 /**
  * Created by alblanc on 20/08/2017.
  */
-
+@Deprecated
 public class NumberTypeAdapter implements TypeAdapter<Number> {
 
     @Override

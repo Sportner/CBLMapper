@@ -1,11 +1,13 @@
 package io.sportner.cblmapper.common;
 
+import io.sportner.cblmapper.annotations.CBLDocument;
 import io.sportner.cblmapper.annotations.DocumentField;
 
 /**
  * Created by alblanc on 19/08/2017.
  */
 
+@CBLDocument
 public class Car {
 
     public static final String FIELD_WHEELS = "wheels";

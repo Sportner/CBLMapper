@@ -1,4 +1,4 @@
-package io.sportner.cblmapper.bind;
+package io.sportner.cblmapper.bind.primitives;
 
 import com.couchbase.lite.Dictionary;
 import com.couchbase.lite.Document;
@@ -8,7 +8,7 @@ import java.util.Date;
 /**
  * Created by alblanc on 20/08/2017.
  */
-
+@Deprecated
 public class DateTypeAdapter implements TypeAdapter<Date> {
 
     @Override

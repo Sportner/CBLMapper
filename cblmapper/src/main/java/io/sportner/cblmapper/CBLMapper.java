@@ -11,22 +11,27 @@ import com.couchbase.lite.Dictionary;
 import com.couchbase.lite.Document;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
+import io.sportner.cblmapper.annotations.CBLDocument;
 import io.sportner.cblmapper.annotations.DocumentField;
 import io.sportner.cblmapper.annotations.NestedDocument;
-import io.sportner.cblmapper.bind.BlobTypeAdapter;
-import io.sportner.cblmapper.bind.BooleanTypeAdapter;
-import io.sportner.cblmapper.bind.DateTypeAdapter;
-import io.sportner.cblmapper.bind.DoubleTypeAdapter;
-import io.sportner.cblmapper.bind.FloatTypeAdapter;
-import io.sportner.cblmapper.bind.IntegerTypeAdapter;
-import io.sportner.cblmapper.bind.LongTypeAdapter;
-import io.sportner.cblmapper.bind.NumberTypeAdapter;
-import io.sportner.cblmapper.bind.StringTypeAdapter;
-import io.sportner.cblmapper.bind.TypeAdapter;
+import io.sportner.cblmapper.bind.lists.ArrayListTypeAdapter;
+import io.sportner.cblmapper.bind.lists.ListTypeAdapter;
+import io.sportner.cblmapper.bind.primitives.BlobTypeAdapter;
+import io.sportner.cblmapper.bind.primitives.BooleanTypeAdapter;
+import io.sportner.cblmapper.bind.primitives.DateTypeAdapter;
+import io.sportner.cblmapper.bind.primitives.DoubleTypeAdapter;
+import io.sportner.cblmapper.bind.primitives.FloatTypeAdapter;
+import io.sportner.cblmapper.bind.primitives.IntegerTypeAdapter;
+import io.sportner.cblmapper.bind.primitives.LongTypeAdapter;
+import io.sportner.cblmapper.bind.primitives.NumberTypeAdapter;
+import io.sportner.cblmapper.bind.primitives.StringTypeAdapter;
+import io.sportner.cblmapper.bind.primitives.TypeAdapter;
 import io.sportner.cblmapper.exceptions.CBLMapperClassException;
 import io.sportner.cblmapper.exceptions.UnhandledTypeException;
 import io.sportner.cblmapper.exceptions.UnsupportedIDFieldTypeException;
@@ -36,15 +41,20 @@ import io.sportner.cblmapper.util.Primitives;
 /**
  * Created by alblanc on 19/08/2017.
  */
-
+@Deprecated
 public class CBLMapper {
 
     public static final String TAG = "CBLMapper";
 
     private Map<Class, TypeAdapter> mTypeAdapters;
+    private Map<Class, ListTypeAdapter> mListTypeAdapters;
 
     public CBLMapper() {
         mTypeAdapters = new ArrayMap<>();
+        mListTypeAdapters = new ArrayMap<>();
+
+        mListTypeAdapters.put(List.class, new ArrayListTypeAdapter()); // Set array list as default List
+        mListTypeAdapters.put(ArrayList.class, new ArrayListTypeAdapter());
 
         registerTypeAdapter(String.class, new StringTypeAdapter());
         registerTypeAdapter(Integer.class, new IntegerTypeAdapter());
@@ -94,42 +104,55 @@ public class CBLMapper {
         return document;
     }
 
-    public Document toDocument(@Nullable Object object, String documentID) throws CBLMapperClassException {
+    public Document toDocument(@NonNull Object object, String documentID) throws CBLMapperClassException {
         Document document = new Document(documentID);
         readObject(object, document);
         return document;
     }
 
-    public Document readObject(@Nullable Object object, Document document) throws UnhandledTypeException {
+    public Document readObject(@NonNull Object object, Document document) throws UnhandledTypeException {
         for (Field field : FieldHelper.getFieldsUpTo(object.getClass(), Object.class)) {
             DocumentField documentFieldAnnotation = field.getAnnotation(DocumentField.class);
             if (documentFieldAnnotation != null && !documentFieldAnnotation.ID()) {
                 // User fieldName as document field name if not specified as DocumentField.fieldName parameter
                 String fieldName = TextUtils.isEmpty(documentFieldAnnotation.fieldName()) ? field.getName() : documentFieldAnnotation.fieldName();
 
-                // Force access private members
+                // Force access to private members
                 if (!field.isAccessible()) {
                     field.setAccessible(true);
                 }
 
-                // Cast primitive to their Object equivalent
-                // eg: int -> Integer
                 Class fieldClass = field.getType();
-                if (Primitives.isPrimitive(fieldClass)) {
-                    fieldClass = Primitives.wrap(fieldClass);
+                if (fieldClass.isAssignableFrom(List.class) ){
+                    ListTypeAdapter typeAdapter = mListTypeAdapters.get(fieldClass);
+                    if (typeAdapter == null) {
+                        throw new UnhandledTypeException(fieldClass);
+                    }
+                    try {
+                        typeAdapter.writeDocument(this, document, fieldName, fieldClass.cast(field.get(object)));
+                    } catch (IllegalAccessException e) {
+                        e.printStackTrace();
+                    }
+                    continue;
                 }
 
-                NestedDocument nestedFieldAnnotation = field.getAnnotation(NestedDocument.class);
-                if (nestedFieldAnnotation != null) {
+                CBLDocument documentAnnotation = field.getType().getAnnotation(CBLDocument.class);
+                if (documentAnnotation != null) {
                     try {
                         document.setDictionary(fieldName,
                                                readObject(fieldClass.cast(field.get(object)),
                                                           new Dictionary(),
-                                                          nestedFieldAnnotation));
+                                                          field.getAnnotation(NestedDocument.class)));
                         continue;
                     } catch (IllegalAccessException e) {
                         e.printStackTrace();
                     }
+                }
+
+                // Cast primitive to their Object equivalent
+                // eg: int -> Integer
+                if (Primitives.isPrimitive(fieldClass)) {
+                    fieldClass = Primitives.wrap(fieldClass);
                 }
 
                 TypeAdapter typeAdapter = mTypeAdapters.get(fieldClass);
@@ -147,7 +170,7 @@ public class CBLMapper {
         return document;
     }
 
-    public Dictionary readObject(@Nullable Object object, @NonNull Dictionary dictionary, @Nullable NestedDocument parentAnnotation) throws
+    public Dictionary readObject(@NonNull Object object, @NonNull Dictionary dictionary, @Nullable NestedDocument parentAnnotation) throws
                                                                                                                                      UnhandledTypeException {
         if (parentAnnotation != null) {
             Arrays.sort(parentAnnotation.omitFields());
@@ -169,23 +192,26 @@ public class CBLMapper {
                     field.setAccessible(true);
                 }
 
-                // Cast primitive to their Object equivalent
-                // eg: int -> Integer
-                Class fieldClass = field.getType();
-                if (Primitives.isPrimitive(fieldClass)) {
-                    fieldClass = Primitives.wrap(fieldClass);
-                }
 
-                NestedDocument nestedFieldAnnotation = field.getAnnotation(NestedDocument.class);
-                if (nestedFieldAnnotation != null) {
+                Class fieldClass = field.getType();
+
+
+                CBLDocument documentAnnotation = field.getType().getAnnotation(CBLDocument.class);
+                if (documentAnnotation != null) {
                     try {
                         dictionary.setDictionary(fieldName,
-                                                 readObject(fieldClass.cast(field.get(object)),
-                                                            new Dictionary(),
-                                                            nestedFieldAnnotation));
+                                               readObject(fieldClass.cast(field.get(object)),
+                                                          new Dictionary(),
+                                                          field.getAnnotation(NestedDocument.class)));
+                        continue;
                     } catch (IllegalAccessException e) {
                         e.printStackTrace();
                     }
+                }
+                // Cast primitive to their Object equivalent
+                // eg: int -> Integer
+                if (Primitives.isPrimitive(fieldClass)) {
+                    fieldClass = Primitives.wrap(fieldClass);
                 }
 
                 TypeAdapter typeAdapter = mTypeAdapters.get(fieldClass);
@@ -242,10 +268,10 @@ public class CBLMapper {
                     continue;
                 }
 
-                NestedDocument nestedDocumentAnnotation = field.getAnnotation(NestedDocument.class);
-                if (nestedDocumentAnnotation != null) {
+                CBLDocument cblDocumentAnnotation = field.getType().getAnnotation(CBLDocument.class);
+                if (cblDocumentAnnotation != null) {
                     try {
-                        field.set(object, fromDocument(document.getDictionary(fieldName), field.getType(), nestedDocumentAnnotation));
+                        field.set(object, fromDocument(document.getDictionary(fieldName), field.getType(), field.getClass().getAnnotation(NestedDocument.class)));
                         continue;
                     } catch (IllegalAccessException e) {
                         e.printStackTrace();

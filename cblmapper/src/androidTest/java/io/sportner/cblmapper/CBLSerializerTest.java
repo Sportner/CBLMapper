@@ -26,7 +26,7 @@ import static org.junit.Assert.assertNull;
  */
 // TODO: Swap all `assertEquals` parameters
 @RunWith(AndroidJUnit4.class)
-public class CBLMapperTest {
+public class CBLSerializerTest {
 
     @Test
     public void testIDSerialization() throws Exception {
@@ -34,7 +34,7 @@ public class CBLMapperTest {
         final String PET_ID = "Nina";
         cat.setID(PET_ID);
 
-        CBLMapper mapper = new CBLMapper();
+        CBLSerializer mapper = new CBLSerializer();
         Document catDocument = mapper.toDocument(cat);
 
         assertNotNull(catDocument);
@@ -47,7 +47,7 @@ public class CBLMapperTest {
         final String PET_NAME = "Nina";
         cat.setName(PET_NAME);
 
-        CBLMapper mapper = new CBLMapper();
+        CBLSerializer mapper = new CBLSerializer();
         Document catDocument = mapper.toDocument(cat);
 
         assertNotNull(catDocument);
@@ -60,7 +60,7 @@ public class CBLMapperTest {
         final int CAR_WHEELS = 2;
         car.setWheels(CAR_WHEELS);
 
-        CBLMapper mapper = new CBLMapper();
+        CBLSerializer mapper = new CBLSerializer();
         Document document = mapper.toDocument(car);
 
         assertNotNull(document);
@@ -88,7 +88,7 @@ public class CBLMapperTest {
                                                aLong,
                                                aNumber,
                                                aString);
-        CBLMapper mapper = new CBLMapper();
+        CBLSerializer mapper = new CBLSerializer();
         Document document = mapper.toDocument(basicTypes);
 
         assertEquals(document.getBlob(BasicTypes.FIELD_BLOB), aBlob);
@@ -127,7 +127,7 @@ public class CBLMapperTest {
                                                      aString);
 
         final NestedType nestedType = new NestedType(aNestedID, basicTypes);
-        CBLMapper mapper = new CBLMapper();
+        CBLSerializer mapper = new CBLSerializer();
         Document document = mapper.toDocument(nestedType);
 
         assertEquals(document.getId(), aNestedID);
@@ -181,7 +181,7 @@ public class CBLMapperTest {
                                                       aString);
 
         final OmitNestedTypeFields nestedType = new OmitNestedTypeFields(aNestedID, basicTypes, basicTypes2);
-        CBLMapper mapper = new CBLMapper();
+        CBLSerializer mapper = new CBLSerializer();
         Document document = mapper.toDocument(nestedType);
 
         assertEquals(document.getId(), aNestedID);
@@ -204,7 +204,7 @@ public class CBLMapperTest {
         final String customValue = "value";
         final OmitFieldName omitFieldName = new OmitFieldName(customValue);
 
-        CBLMapper documentMapper = new CBLMapper();
+        CBLSerializer documentMapper = new CBLSerializer();
         Document document = documentMapper.toDocument(omitFieldName);
 
         assertEquals(customValue, document.getString("mCustomField"));
@@ -234,7 +234,7 @@ public class CBLMapperTest {
         document.setNumber(BasicTypes.FIELD_NUMBER, aNumber);
         document.setString(BasicTypes.FIELD_STRING, aString);
 
-        CBLMapper documentMapper = new CBLMapper();
+        CBLSerializer documentMapper = new CBLSerializer();
         BasicTypes basicTypes = documentMapper.fromDocument(document, BasicTypes.class);
 
         assertNotNull(basicTypes);
@@ -246,7 +246,7 @@ public class CBLMapperTest {
         final String id = "testID";
         Document document = new Document(id);
 
-        CBLMapper documentMapper = new CBLMapper();
+        CBLSerializer documentMapper = new CBLSerializer();
         SimpleModelWithID simpleModelWithID = documentMapper.fromDocument(document, SimpleModelWithID.class);
 
         assertNotNull(simpleModelWithID);
@@ -263,7 +263,7 @@ public class CBLMapperTest {
         document.setString(ChildClass.FIELD_NAME, name);
         document.setInt(ChildClass.FIELD_AGE, age);
 
-        CBLMapper documentMapper = new CBLMapper();
+        CBLSerializer documentMapper = new CBLSerializer();
         ChildClass simpleModelWithID = documentMapper.fromDocument(document, ChildClass.class);
 
         assertNotNull(simpleModelWithID);
@@ -300,7 +300,7 @@ public class CBLMapperTest {
         Document document = new Document(aNestedID);
         document.setDictionary(NestedType.FIELD_BASIC_TYPES, nestedDic);
 
-        CBLMapper documentMapper = new CBLMapper();
+        CBLSerializer documentMapper = new CBLSerializer();
         NestedType nestedDocument = documentMapper.fromDocument(document, NestedType.class);
 
         assertNotNull(nestedDocument);
@@ -451,6 +451,21 @@ public class CBLMapperTest {
         }
     }
 
+    @CBLDocument
+    public static class OmitFieldName {
+
+        @DocumentField()
+        String mCustomField;
+
+        public OmitFieldName(String customField) {
+            mCustomField = customField;
+        }
+
+        public String getCustomField() {
+            return mCustomField;
+        }
+    }
+
     public static class SimpleModelWithID {
 
         public static final String FIELD_NAME = "name";
@@ -485,6 +500,7 @@ public class CBLMapperTest {
         }
     }
 
+    @CBLDocument
     public class OmitNestedTypeFields {
 
         public static final String FIELD_ID = "id";
@@ -518,20 +534,6 @@ public class CBLMapperTest {
 
         public BasicTypes getBasicTypes2() {
             return mBasicTypes2;
-        }
-    }
-
-    class OmitFieldName {
-
-        @DocumentField()
-        String mCustomField;
-
-        public OmitFieldName(String customField) {
-            mCustomField = customField;
-        }
-
-        public String getCustomField() {
-            return mCustomField;
         }
     }
 
