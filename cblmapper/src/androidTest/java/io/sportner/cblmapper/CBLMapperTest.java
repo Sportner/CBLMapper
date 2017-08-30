@@ -2,6 +2,7 @@ package io.sportner.cblmapper;
 
 import android.support.test.runner.AndroidJUnit4;
 
+import com.couchbase.lite.Array;
 import com.couchbase.lite.Blob;
 import com.couchbase.lite.Dictionary;
 import com.couchbase.lite.Document;
@@ -9,13 +10,13 @@ import com.couchbase.lite.Document;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import io.sportner.cblmapper.annotations.CBLDocument;
 import io.sportner.cblmapper.annotations.DocumentField;
 import io.sportner.cblmapper.annotations.NestedDocument;
-import io.sportner.cblmapper.common.Car;
-import io.sportner.cblmapper.common.SimplePet;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -27,6 +28,51 @@ import static org.junit.Assert.assertNull;
 // TODO: Swap all `assertEquals` parameters
 @RunWith(AndroidJUnit4.class)
 public class CBLMapperTest {
+
+    @CBLDocument
+    public static class Car {
+
+        public static final String FIELD_WHEELS = "wheels";
+
+        @DocumentField(fieldName = FIELD_WHEELS)
+        int wheels;
+
+        public int getWheels() {
+            return wheels;
+        }
+
+        public void setWheels(int wheels) {
+            this.wheels = wheels;
+        }
+    }
+
+    @CBLDocument
+    public static class SimplePet {
+
+        public static final String FIELD_NAME = "name";
+
+        @DocumentField(ID = true)
+        private String ID;
+
+        @DocumentField(fieldName = FIELD_NAME)
+        private String name;
+
+        public String getID() {
+            return ID;
+        }
+
+        public void setID(String ID) {
+            this.ID = ID;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+    }
 
     @Test
     public void testIDSerialization() throws Exception {
@@ -319,6 +365,47 @@ public class CBLMapperTest {
         assertEquals(aString, basicTypes.getString());
     }
 
+    @Test
+    public void testUnserializeArrayList() throws Exception {
+        final Blob aBlob = new Blob("text/plain", "Byte array test".getBytes());
+        final boolean aBoolean = true;
+        final Date aDate = new Date();
+        final double aDouble = 4.456;
+        final float aFloat = 34.34f;
+        final int anInt = 15;
+        final long aLong = 23456345;
+        final Number aNumber = 4567;
+        final String aString = "Test string";
+
+        Dictionary nestedDic = new Dictionary();
+        nestedDic.setBlob(BasicTypes.FIELD_BLOB, aBlob);
+        nestedDic.setBoolean(BasicTypes.FIELD_BOOLEAN, aBoolean);
+        nestedDic.setDate(BasicTypes.FIELD_DATE, aDate);
+        nestedDic.setDouble(BasicTypes.FIELD_DOUBLE, aDouble);
+        nestedDic.setFloat(BasicTypes.FIELD_FLOAT, aFloat);
+        nestedDic.setInt(BasicTypes.FIELD_INTEGER, anInt);
+        nestedDic.setLong(BasicTypes.FIELD_LONG, aLong);
+        nestedDic.setNumber(BasicTypes.FIELD_NUMBER, aNumber);
+        nestedDic.setString(BasicTypes.FIELD_STRING, aString);
+
+        Document document = new Document();
+        Array array = new Array();
+        array.addDictionary(nestedDic);
+
+        document.setArray(ListMemberClass.FIELD_LIST, array);
+
+        ListMemberClass listMemberClass = new CBLMapper().fromDocument(document, ListMemberClass.class);
+
+        assertNotNull(listMemberClass);
+        List<BasicTypes> basicTypesList = listMemberClass.getBasicTypesList();
+
+        assertNotNull(basicTypesList);
+        assertEquals(1, basicTypesList.size());
+
+        Date date = basicTypesList.get(0).getDate();
+        assertEquals(aDate, date);
+    }
+
     @CBLDocument
     public static class BasicTypes {
 
@@ -423,6 +510,7 @@ public class CBLMapperTest {
         }
     }
 
+    @CBLDocument
     public static class NestedType {
 
         public static final String FIELD_ID = "id";
@@ -451,6 +539,22 @@ public class CBLMapperTest {
         }
     }
 
+    @CBLDocument
+    public static class OmitFieldName {
+
+        @DocumentField()
+        String mCustomField;
+
+        public OmitFieldName(String customField) {
+            mCustomField = customField;
+        }
+
+        public String getCustomField() {
+            return mCustomField;
+        }
+    }
+
+    @CBLDocument
     public static class SimpleModelWithID {
 
         public static final String FIELD_NAME = "name";
@@ -473,6 +577,7 @@ public class CBLMapperTest {
         }
     }
 
+    @CBLDocument
     public static class ChildClass extends SimpleModelWithID {
 
         public static final String FIELD_AGE = "age";
@@ -485,6 +590,20 @@ public class CBLMapperTest {
         }
     }
 
+    @CBLDocument
+    public static class ListMemberClass {
+
+        private static final String FIELD_LIST = "lists";
+
+        @DocumentField(fieldName = FIELD_LIST)
+        ArrayList<BasicTypes> mBasicTypesList;
+
+        public ArrayList<BasicTypes> getBasicTypesList() {
+            return mBasicTypesList;
+        }
+    }
+
+    @CBLDocument
     public class OmitNestedTypeFields {
 
         public static final String FIELD_ID = "id";
@@ -494,7 +613,6 @@ public class CBLMapperTest {
         @DocumentField(fieldName = FIELD_ID, ID = true)
         String mID;
 
-        @NestedDocument
         @DocumentField(fieldName = FIELD_BASIC_TYPES)
         BasicTypes mBasicTypes;
 
@@ -520,19 +638,4 @@ public class CBLMapperTest {
             return mBasicTypes2;
         }
     }
-
-    class OmitFieldName {
-
-        @DocumentField()
-        String mCustomField;
-
-        public OmitFieldName(String customField) {
-            mCustomField = customField;
-        }
-
-        public String getCustomField() {
-            return mCustomField;
-        }
-    }
-
 }
