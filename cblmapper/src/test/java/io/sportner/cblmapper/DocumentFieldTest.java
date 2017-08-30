@@ -4,8 +4,8 @@ import org.junit.Test;
 
 import java.lang.reflect.Field;
 
+import io.sportner.cblmapper.annotations.CBLDocument;
 import io.sportner.cblmapper.annotations.DocumentField;
-import io.sportner.cblmapper.common.SimplePet;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -15,6 +15,35 @@ import static org.junit.Assert.assertTrue;
  * DocumentField annotation unit test
  */
 public class DocumentFieldTest {
+
+    @CBLDocument
+    public class SimplePet {
+
+        public static final String FIELD_NAME = "name";
+
+        @DocumentField(ID = true)
+        private String ID;
+
+        @DocumentField(fieldName = FIELD_NAME)
+        private String name;
+
+        public String getID() {
+            return ID;
+        }
+
+        public void setID(String ID) {
+            this.ID = ID;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+    }
+
 
     @Test
     public void annotation_isPresent() throws Exception {
