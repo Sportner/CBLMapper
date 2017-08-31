@@ -1,4 +1,6 @@
 apply plugin: 'com.android.library'
+apply plugin: 'com.github.dcendents.android-maven'
+apply plugin: 'com.jfrog.bintray'
 
 android {
     compileSdkVersion 25
@@ -8,7 +10,7 @@ android {
         minSdkVersion 21
         targetSdkVersion 25
         versionCode 1
-        versionName "1.0"
+        versionName "0.1-DB02"
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
 
@@ -29,4 +31,85 @@ dependencies {
     compile 'com.android.support:appcompat-v7:25.3.1'
     compile 'com.couchbase.lite:couchbase-lite-android:2.0.0-DB014'
     testCompile 'junit:junit:4.12'
+}
+
+
+task sourcesJar(type: Jar) {
+    from android.sourceSets.main.java.srcDirs
+    classifier = 'sources'
+}
+
+task javadoc(type: Javadoc) {
+    source = android.sourceSets.main.java.srcDirs
+    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+artifacts {
+    archives javadocJar
+    archives sourcesJar
+}
+
+group = 'io.sportner.cblmapper'
+version = '0.1-DB02'
+
+install {
+    repositories.mavenInstaller {
+        pom.project {
+            name 'CBLMapper'
+            description 'https://github.com/sportner/CBLMapper'
+            url 'https://github.com/sportner/CBLMapper'
+            inceptionYear '2017'
+
+            packaging 'aar'
+            groupId 'io.sportner.cblmapper'
+            artifactId 'cblmapper'
+            version '0.1-DB02'
+
+            licenses {
+                license {
+                    name "The Apache Software License, Version 2.0"
+                    url "http://www.apache.org/licenses/LICENSE-2.0.txt"
+                }
+            }
+            scm {
+                connection 'https://github.com/sportner/CBLMapper.git'
+                url 'https://github.com/sportner/CBLMapper'
+
+            }
+            developers {
+                developer {
+                    id = 'alblanc'
+                    name 'Alban DEFLANDRE'
+                    email 'alban@sportner.io'
+                }
+            }
+        }
+    }
+}
+
+Properties bintrayProperties = new Properties()
+bintrayProperties.load(project.rootProject.file('bintray.properties').newDataInputStream())
+
+bintray {
+    user = bintrayProperties.getProperty('user')
+    key = bintrayProperties.get('key')
+    configurations = ['archives']
+    pkg {
+        repo = 'Android'
+        name = 'CBLMapper'
+        userOrg = 'sportner'
+        licenses = ['Apache-2.0']
+        publish = true
+        version {
+            name = '0.1-DB02'
+            desc = '0.1 not stable. Still experimental. Lists partially supported (List + ArrayList), Hashmap & enum support coming in the next build.'
+            released = new Date()
+            vcsTag = 'v0.1-DB02'
+        }
+    }
 }

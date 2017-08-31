@@ -4,6 +4,9 @@
 .settings
 eclipsebin
 
+#Maven
+bintray.properties
+
 # Ant
 bin
 gen
