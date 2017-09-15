@@ -20,11 +20,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import io.sportner.cblmapper.annotations.CBLDocument;
 import io.sportner.cblmapper.annotations.DocumentField;
 import io.sportner.cblmapper.annotations.NestedDocument;
 import io.sportner.cblmapper.exceptions.CBLMapperClassException;
-import io.sportner.cblmapper.exceptions.NotCBLDocumentException;
 import io.sportner.cblmapper.exceptions.UnhandledTypeException;
 import io.sportner.cblmapper.exceptions.UnsupportedIDFieldTypeException;
 import io.sportner.cblmapper.util.FieldHelper;
@@ -36,18 +34,21 @@ import io.sportner.cblmapper.util.Primitives;
 
 public class CBLMapper {
 
-    public Document toDocument(@NonNull Object object) throws CBLMapperClassException {
+    public Document toDocument(@NonNull CBLDocument object) throws CBLMapperClassException {
         return toDocument(object, findDocumentID(object));
     }
 
-    private Document toDocument(@NonNull Object object, @Nullable String documentID) throws CBLMapperClassException {
-        if (object.getClass().getAnnotation(CBLDocument.class) == null) {
-            throw new NotCBLDocumentException(object.getClass());
+    private Document toDocument(@NonNull CBLDocument object, @Nullable String documentID) throws CBLMapperClassException {
+        Document doc = object.getDocument();
+        if (doc == null) {
+            doc = new Document(documentID);
         }
-        return new Document(documentID, (Map<String, Object>) encode(object));
+
+        doc.set((Map<String, Object>) encode(object));
+        return doc;
     }
 
-    public <T> T fromDocument(@Nullable Document document, @NonNull Class<T> typeOfT) throws CBLMapperClassException {
+    public <T extends CBLDocument> T fromDocument(@Nullable Document document, @NonNull Class<T> typeOfT) throws CBLMapperClassException {
         if (document == null) {
             return null;
         }
@@ -58,6 +59,7 @@ public class CBLMapper {
 
         // Attach ID to object
         if (object != null) {
+            object.setDocument(document);
             for (Field field : FieldHelper.getFieldsUpTo(object.getClass(), Object.class)) {
                 DocumentField documentFieldAnnotation = field.getAnnotation(DocumentField.class);
                 if (documentFieldAnnotation != null && documentFieldAnnotation.ID()) {
@@ -109,7 +111,7 @@ public class CBLMapper {
 
     private Object encode(@Nullable Object value, @Nullable NestedDocument annotation) throws CBLMapperClassException {
 
-        if (value != null && value.getClass().getAnnotation(CBLDocument.class) != null) {
+        if (value != null && value instanceof CBLDocument) {
             return encodeCBLDocument(value, annotation);
         } else if (value instanceof Dictionary) {
             return value;
@@ -139,27 +141,26 @@ public class CBLMapper {
         Class typeOfT = field.getType();
         if (List.class.isAssignableFrom(typeOfT)) {
             result = decodeCBLList((List) value, field);
-        } else if (value != null && typeOfT.getAnnotation(CBLDocument.class) != null) {
+        } else if (value != null && CBLDocument.class.isAssignableFrom(typeOfT)) {
             result = decodeCBLDocument((Map<String, Object>) value, typeOfT);
         } else if (typeOfT.equals(Date.class)) {
             result = (T) typeOfT.cast(DateUtils.fromJson((String) value));
         } else if (value == null || value == RemovedValue.INSTANCE) {
             result = null;
-        }
-        else if (Primitives.isPrimitive(value.getClass()) ||
-            value instanceof String ||
-            value instanceof Number ||
-            value instanceof Boolean ||
-            value instanceof Blob) {
+        } else if (Primitives.isPrimitive(value.getClass()) ||
+                   value instanceof String ||
+                   value instanceof Number ||
+                   value instanceof Boolean ||
+                   value instanceof Blob) {
             result = value;
         } else {
             throw new UnhandledTypeException(value.getClass());
         }
-        return (T)result;
+        return (T) result;
     }
 
     private <T> T decode(@Nullable Object value, @NonNull Class<T> typeOfT) throws CBLMapperClassException {
-        if (value != null && typeOfT.getAnnotation(CBLDocument.class) != null) {
+        if (value != null && CBLDocument.class.isAssignableFrom(typeOfT)) {
             return decodeCBLDocument((Map<String, Object>) value, typeOfT);
         }
         if (typeOfT.equals(Date.class)) {

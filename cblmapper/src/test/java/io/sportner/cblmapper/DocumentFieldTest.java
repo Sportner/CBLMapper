@@ -4,7 +4,6 @@ import org.junit.Test;
 
 import java.lang.reflect.Field;
 
-import io.sportner.cblmapper.annotations.CBLDocument;
 import io.sportner.cblmapper.annotations.DocumentField;
 
 import static org.junit.Assert.assertEquals;
@@ -16,8 +15,7 @@ import static org.junit.Assert.assertTrue;
  */
 public class DocumentFieldTest {
 
-    @CBLDocument
-    public class SimplePet {
+    public class SimplePet extends CBLDocument {
 
         public static final String FIELD_NAME = "name";
 

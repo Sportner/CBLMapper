@@ -14,7 +14,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import io.sportner.cblmapper.annotations.CBLDocument;
 import io.sportner.cblmapper.annotations.DocumentField;
 import io.sportner.cblmapper.annotations.NestedDocument;
 
@@ -29,8 +28,7 @@ import static org.junit.Assert.assertNull;
 @RunWith(AndroidJUnit4.class)
 public class CBLMapperTest {
 
-    @CBLDocument
-    public static class Car {
+    public static class Car extends CBLDocument {
 
         public static final String FIELD_WHEELS = "wheels";
 
@@ -46,8 +44,7 @@ public class CBLMapperTest {
         }
     }
 
-    @CBLDocument
-    public static class SimplePet {
+    public static class SimplePet extends CBLDocument {
 
         public static final String FIELD_NAME = "name";
 
@@ -406,8 +403,7 @@ public class CBLMapperTest {
         assertEquals(aDate, date);
     }
 
-    @CBLDocument
-    public static class BasicTypes {
+    public static class BasicTypes extends CBLDocument {
 
         public static final String FIELD_BLOB = "blob";
         public static final String FIELD_BOOLEAN = "boolean";
@@ -510,8 +506,7 @@ public class CBLMapperTest {
         }
     }
 
-    @CBLDocument
-    public static class NestedType {
+    public static class NestedType extends CBLDocument {
 
         public static final String FIELD_ID = "id";
         public static final String FIELD_BASIC_TYPES = "basics";
@@ -539,8 +534,7 @@ public class CBLMapperTest {
         }
     }
 
-    @CBLDocument
-    public static class OmitFieldName {
+    public static class OmitFieldName extends CBLDocument {
 
         @DocumentField()
         String mCustomField;
@@ -554,8 +548,7 @@ public class CBLMapperTest {
         }
     }
 
-    @CBLDocument
-    public static class SimpleModelWithID {
+    public static class SimpleModelWithID extends CBLDocument {
 
         public static final String FIELD_NAME = "name";
 
@@ -577,7 +570,6 @@ public class CBLMapperTest {
         }
     }
 
-    @CBLDocument
     public static class ChildClass extends SimpleModelWithID {
 
         public static final String FIELD_AGE = "age";
@@ -590,8 +582,7 @@ public class CBLMapperTest {
         }
     }
 
-    @CBLDocument
-    public static class ListMemberClass {
+    public static class ListMemberClass extends CBLDocument {
 
         private static final String FIELD_LIST = "lists";
 
@@ -603,8 +594,7 @@ public class CBLMapperTest {
         }
     }
 
-    @CBLDocument
-    public class OmitNestedTypeFields {
+    public class OmitNestedTypeFields extends CBLDocument {
 
         public static final String FIELD_ID = "id";
         public static final String FIELD_BASIC_TYPES = "basics";
