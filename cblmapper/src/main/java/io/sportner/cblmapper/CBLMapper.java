@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import io.sportner.cblmapper.annotations.CBLEnumValue;
 import io.sportner.cblmapper.annotations.DocumentField;
 import io.sportner.cblmapper.annotations.NestedDocument;
 import io.sportner.cblmapper.exceptions.CBLMapperClassException;
@@ -83,7 +84,11 @@ public class CBLMapper {
         return object;
     }
 
-    private String findDocumentID(@NonNull Object object) throws UnsupportedIDFieldTypeException {
+    private String findDocumentID(@NonNull CBLDocument object) throws UnsupportedIDFieldTypeException {
+        Document document = object.getDocument();
+        if (document != null && !TextUtils.isEmpty(document.getId())){
+            return document.getId();
+        }
         for (Field field : FieldHelper.getFieldsUpTo(object.getClass(), Object.class)) {
             DocumentField documentFieldAnnotation = field.getAnnotation(DocumentField.class);
             if (documentFieldAnnotation != null && documentFieldAnnotation.ID()) {
@@ -113,7 +118,10 @@ public class CBLMapper {
 
         if (value != null && value instanceof CBLDocument) {
             return encodeCBLDocument(value, annotation);
-        } else if (value instanceof Dictionary) {
+        } else if (value != null && value.getClass().isEnum()) {
+            return encodeEnumValue((Enum) value);
+        }
+        if (value instanceof Dictionary) {
             return value;
         } else if (value instanceof Array) {
             return value;
@@ -136,13 +144,26 @@ public class CBLMapper {
         return value;
     }
 
+    public <T extends Enum<T>> String encodeEnumValue(T enumValue) {
+        Field field = null;
+        try {
+            field = enumValue.getClass().getField(enumValue.name());
+            CBLEnumValue annotation = field.getAnnotation(CBLEnumValue.class);
+            return annotation == null ? enumValue.name() : annotation.value();
+        } catch (NoSuchFieldException e) {
+            return enumValue.name();
+        }
+    }
+
     private <T> T decode(@Nullable Object value, Field field) throws CBLMapperClassException {
         Object result;
         Class typeOfT = field.getType();
         if (List.class.isAssignableFrom(typeOfT)) {
             result = decodeCBLList((List) value, field);
-        } else if (value != null && CBLDocument.class.isAssignableFrom(typeOfT)) {
+        } else if (CBLDocument.class.isAssignableFrom(typeOfT)) {
             result = decodeCBLDocument((Map<String, Object>) value, typeOfT);
+        } else if (Enum.class.isAssignableFrom(typeOfT)) {
+            result = decodeEnum((String) value, typeOfT);
         } else if (typeOfT.equals(Date.class)) {
             result = (T) typeOfT.cast(DateUtils.fromJson((String) value));
         } else if (value == null || value == RemovedValue.INSTANCE) {
@@ -157,6 +178,24 @@ public class CBLMapper {
             throw new UnhandledTypeException(value.getClass());
         }
         return (T) result;
+    }
+
+    private Enum decodeEnum(String value, Class<Enum> fieldType) {
+        for (Enum enumValue : fieldType.getEnumConstants()) {
+            try {
+                CBLEnumValue enumAnnotation = fieldType.getField(enumValue.name()).getAnnotation(CBLEnumValue.class);
+                if (enumAnnotation != null) {
+                    if (enumAnnotation.value().equals(value)) {
+                        return enumValue;
+                    }
+                } else if (enumValue.name().equals(value)){
+                    return enumValue;
+                }
+            } catch (NoSuchFieldException e) {
+                e.printStackTrace();
+            }
+        }
+        return null;
     }
 
     private <T> T decode(@Nullable Object value, @NonNull Class<T> typeOfT) throws CBLMapperClassException {

@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import io.sportner.cblmapper.annotations.CBLEnumValue;
 import io.sportner.cblmapper.annotations.DocumentField;
 import io.sportner.cblmapper.annotations.NestedDocument;
 
@@ -363,6 +364,21 @@ public class CBLMapperTest {
     }
 
     @Test
+    public void testEnum() throws Exception {
+        Animal animal = new Animal();
+        animal.mSpecy = Species.Mouse;
+
+        CBLMapper cblMapper = new CBLMapper();
+        Document document = cblMapper.toDocument(animal);
+
+        assertEquals("mouse", document.getString(Animal.FIELD_SPECY));
+
+        Animal animal2 = cblMapper.fromDocument(document, Animal.class);
+
+        assertEquals(Species.Mouse.name(), animal2.mSpecy.name());
+    }
+
+    @Test
     public void testUnserializeArrayList() throws Exception {
         final Blob aBlob = new Blob("text/plain", "Byte array test".getBytes());
         final boolean aBoolean = true;
@@ -628,4 +644,22 @@ public class CBLMapperTest {
             return mBasicTypes2;
         }
     }
+
+    public enum Species {
+        @CBLEnumValue("dog")
+        Dog,
+        @CBLEnumValue("cat")
+        Cat,
+        @CBLEnumValue("mouse")
+        Mouse;
+    }
+
+    public static class Animal extends CBLDocument {
+
+        public static final String FIELD_SPECY = "specy";
+
+        @DocumentField(fieldName = FIELD_SPECY)
+        public Species mSpecy;
+    }
+
 }
