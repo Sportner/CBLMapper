@@ -144,7 +144,7 @@ public class CBLMapper {
         return value;
     }
 
-    public <T extends Enum<T>> String encodeEnumValue(T enumValue) {
+    private <T extends Enum<T>> String encodeEnumValue(T enumValue) {
         Field field = null;
         try {
             field = enumValue.getClass().getField(enumValue.name());
