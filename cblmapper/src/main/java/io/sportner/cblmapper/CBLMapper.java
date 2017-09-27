@@ -8,6 +8,7 @@ import com.couchbase.lite.Array;
 import com.couchbase.lite.Blob;
 import com.couchbase.lite.Dictionary;
 import com.couchbase.lite.Document;
+import com.couchbase.lite.ReadOnlyDictionary;
 import com.couchbase.lite.internal.document.RemovedValue;
 import com.couchbase.lite.internal.support.DateUtils;
 
@@ -49,17 +50,18 @@ public class CBLMapper {
         return doc;
     }
 
-    public <T extends CBLDocument> T fromDocument(@Nullable Document document, @NonNull Class<T> typeOfT) throws CBLMapperClassException {
-        if (document == null) {
+    public <T extends CBLDocument> T fromDocument(@Nullable ReadOnlyDictionary dictionary, @NonNull Class<T> typeOfT) throws CBLMapperClassException {
+        if (dictionary == null) {
             return null;
         }
 
         T object = null;
 
-        object = decode(document.toMap(), typeOfT);
+        object = decode(dictionary.toMap(), typeOfT);
 
         // Attach ID to object
-        if (object != null) {
+        if (object != null && dictionary instanceof Document) {
+            Document document = (Document)dictionary;
             object.setDocument(document);
             for (Field field : FieldHelper.getFieldsUpTo(object.getClass(), Object.class)) {
                 DocumentField documentFieldAnnotation = field.getAnnotation(DocumentField.class);
