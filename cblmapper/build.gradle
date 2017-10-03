@@ -10,7 +10,7 @@ android {
         minSdkVersion 21
         targetSdkVersion 25
         versionCode 1
-        versionName "0.1-DB04"
+        versionName "0.1-DB06"
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
 
@@ -55,7 +55,7 @@ artifacts {
 }
 
 group = 'io.sportner.cblmapper'
-version = '0.1-DB04'
+version = '0.1-DB06'
 
 install {
     repositories.mavenInstaller {
@@ -68,7 +68,7 @@ install {
             packaging 'aar'
             groupId 'io.sportner.cblmapper'
             artifactId 'cblmapper'
-            version '0.1-DB04'
+            version '0.1-DB06'
 
             licenses {
                 license {
@@ -106,10 +106,10 @@ bintray {
         licenses = ['Apache-2.0']
         publish = true
         version {
-            name = '0.1-DB04'
+            name = '0.1-DB06'
             desc = '0.1 not stable. Still experimental. Lists partially supported (List + ArrayList), Hashmap & enum support coming in the next build.'
             released = new Date()
-            vcsTag = 'v0.1-DB04'
+            vcsTag = 'v0.1-DB06'
         }
     }
 }

@@ -118,12 +118,13 @@ public class CBLMapper {
 
     private Object encode(@Nullable Object value, @Nullable NestedDocument annotation) throws CBLMapperClassException {
 
-        if (value != null && value instanceof CBLDocument) {
+        if (value == null || value == RemovedValue.INSTANCE) {
+            return null;
+        } else if (value instanceof CBLDocument) {
             return encodeCBLDocument(value, annotation);
         } else if (value != null && value.getClass().isEnum()) {
             return encodeEnumValue((Enum) value);
-        }
-        if (value instanceof Dictionary) {
+        } else if (value instanceof Dictionary) {
             return value;
         } else if (value instanceof Array) {
             return value;
@@ -160,7 +161,10 @@ public class CBLMapper {
     private <T> T decode(@Nullable Object value, Field field) throws CBLMapperClassException {
         Object result;
         Class typeOfT = field.getType();
-        if (List.class.isAssignableFrom(typeOfT)) {
+        if (value == null || value == RemovedValue.INSTANCE) {
+            result = null;
+        }
+        else if (List.class.isAssignableFrom(typeOfT)) {
             result = decodeCBLList((List) value, field);
         } else if (CBLDocument.class.isAssignableFrom(typeOfT)) {
             result = decodeCBLDocument((Map<String, Object>) value, typeOfT);
@@ -168,8 +172,6 @@ public class CBLMapper {
             result = decodeEnum((String) value, typeOfT);
         } else if (typeOfT.equals(Date.class)) {
             result = (T) typeOfT.cast(DateUtils.fromJson((String) value));
-        } else if (value == null || value == RemovedValue.INSTANCE) {
-            result = null;
         } else if (Primitives.isPrimitive(value.getClass()) ||
                    value instanceof String ||
                    value instanceof Number ||

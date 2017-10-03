@@ -12,7 +12,7 @@ import io.sportner.cblmapper.exceptions.CBLMapperClassException;
 
 public class CBLDocument {
 
-    private Document mDocument;
+    private transient Document mDocument;
 
     public CBLDocument() {}
 
