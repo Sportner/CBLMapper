@@ -6,6 +6,8 @@ import android.text.TextUtils;
 
 import com.couchbase.lite.Array;
 import com.couchbase.lite.Blob;
+import com.couchbase.lite.CouchbaseLiteException;
+import com.couchbase.lite.Database;
 import com.couchbase.lite.Dictionary;
 import com.couchbase.lite.Document;
 import com.couchbase.lite.ReadOnlyDictionary;
@@ -36,18 +38,70 @@ import io.sportner.cblmapper.util.Primitives;
 
 public class CBLMapper {
 
-    public Document toDocument(@NonNull CBLDocument object) throws CBLMapperClassException {
-        return toDocument(object, findDocumentID(object));
+    static private CBLMapper INSTANCE;
+
+    private Database mDatabase;
+
+    public CBLMapper() {
     }
 
-    private Document toDocument(@NonNull CBLDocument object, @Nullable String documentID) throws CBLMapperClassException {
+    public CBLMapper(Database database) {
+        this();
+        mDatabase = database;
+    }
+
+    static public CBLMapper configureDefaultInstance(@Nullable Database db) {
+        INSTANCE = new CBLMapper(db);
+        return INSTANCE;
+    }
+
+    static public CBLMapper getDefaultInstance() {
+        if (INSTANCE == null) {
+            throw new IllegalStateException("You must configure default instance before using it");
+        }
+        return INSTANCE;
+    }
+
+    public Database getDatabase() {
+        return mDatabase;
+    }
+
+    public void save(CBLDocument cblDocument) throws CBLMapperClassException, CouchbaseLiteException {
+        if (mDatabase == null) {
+            throw new IllegalStateException("You must attach a database in order to save documents");
+        }
+        mDatabase.save(toDocument(cblDocument));
+    }
+
+    public Document toDocument(@NonNull CBLDocument object) throws CBLMapperClassException {
         Document doc = object.getDocument();
-        if (doc == null) {
-            doc = new Document(documentID);
+
+        if (doc == null && mDatabase != null) {
+            doc = mDatabase.getDocument(object.getDocumentID());
         }
 
-        doc.set((Map<String, Object>) encode(object));
+        if (doc == null) {
+            doc = new Document(object.getDocumentID());
+        }
+
+        doc.set((Map<String, Object>) encode(object, true));
         return doc;
+    }
+
+    public <T extends CBLDocument> void load(T instanceOfT) throws CBLMapperClassException {
+        Document doc = instanceOfT.getDocument();
+        if (doc == null) {
+            doc = mDatabase.getDocument(instanceOfT.getDocumentID());
+            instanceOfT.setDocument(doc);
+        }
+
+        if (doc != null) {
+            decodeObject(doc.toMap(), instanceOfT);
+        }
+    }
+
+    public <T extends CBLDocument> T load(@NonNull String docID, @NonNull Class<T> typeOfT) throws CBLMapperClassException {
+        return fromDocument(mDatabase.getDocument(docID), typeOfT);
     }
 
     public <T extends CBLDocument> T fromDocument(@Nullable ReadOnlyDictionary dictionary, @NonNull Class<T> typeOfT) throws CBLMapperClassException {
@@ -57,41 +111,20 @@ public class CBLMapper {
 
         T object = null;
 
-        object = decode(dictionary.toMap(), typeOfT);
+        object = decode(dictionary.toMap(), typeOfT, true, null);
 
-        // Attach ID to object
+        // Attach ID & Document to object
         if (object != null && dictionary instanceof Document) {
-            Document document = (Document)dictionary;
+            Document document = (Document) dictionary;
             object.setDocument(document);
-            for (Field field : FieldHelper.getFieldsUpTo(object.getClass(), Object.class)) {
-                DocumentField documentFieldAnnotation = field.getAnnotation(DocumentField.class);
-                if (documentFieldAnnotation != null && documentFieldAnnotation.ID()) {
-                    if (field.getType() == String.class) {
-                        try {
-                            if (!field.isAccessible()) {
-                                field.setAccessible(true);
-                            }
-                            field.set(object, document.getId());
-                        } catch (IllegalAccessException e) {
-                            // Ignore as it can't happen
-                        }
-                        break;
-                    } else {
-                        throw new UnsupportedIDFieldTypeException(object.getClass());
-                    }
-                }
-            }
+            setCBLDocumentID(object, document.getId());
         }
 
         return object;
     }
 
-    private String findDocumentID(@NonNull CBLDocument object) throws UnsupportedIDFieldTypeException {
-        Document document = object.getDocument();
-        if (document != null && !TextUtils.isEmpty(document.getId())){
-            return document.getId();
-        }
-        for (Field field : FieldHelper.getFieldsUpTo(object.getClass(), Object.class)) {
+    private void setCBLDocumentID(@NonNull CBLDocument cblDocument, @NonNull String docID) {
+        for (Field field : FieldHelper.getFieldsUpTo(cblDocument.getClass(), Object.class)) {
             DocumentField documentFieldAnnotation = field.getAnnotation(DocumentField.class);
             if (documentFieldAnnotation != null && documentFieldAnnotation.ID()) {
                 if (field.getType() == String.class) {
@@ -99,29 +132,65 @@ public class CBLMapper {
                         if (!field.isAccessible()) {
                             field.setAccessible(true);
                         }
-                        return (String) field.get(object);
+                        field.set(cblDocument, docID);
                     } catch (IllegalAccessException e) {
                         // Ignore as it can't happen
                     }
                     break;
                 } else {
-                    throw new UnsupportedIDFieldTypeException(object.getClass());
+                    throw new UnsupportedIDFieldTypeException(cblDocument.getClass());
                 }
             }
         }
-        return null;
     }
 
-    private Object encode(@Nullable Object value) throws CBLMapperClassException {
-        return encode(value, null);
+    //    public String findDocumentID(@NonNull CBLDocument object) throws UnsupportedIDFieldTypeException {
+    //        Document document = object.getDocument();
+    //        if (document != null && !TextUtils.isEmpty(document.getId())) {
+    //            return document.getId();
+    //        }
+    //        for (Field field : FieldHelper.getFieldsUpTo(object.getClass(), Object.class)) {
+    //            DocumentField documentFieldAnnotation = field.getAnnotation(DocumentField.class);
+    //            if (documentFieldAnnotation != null && documentFieldAnnotation.ID()) {
+    //                if (field.getType() == String.class) {
+    //                    try {
+    //                        if (!field.isAccessible()) {
+    //                            field.setAccessible(true);
+    //                        }
+    //                        return (String) field.get(object);
+    //                    } catch (IllegalAccessException e) {
+    //                        // Ignore as it can't happen
+    //                    }
+    //                    break;
+    //                } else {
+    //                    throw new UnsupportedIDFieldTypeException(object.getClass());
+    //                }
+    //            }
+    //        }
+    //        return null;
+    //    }
+
+    private Object encode(@Nullable Object value, boolean isRoot) throws CBLMapperClassException {
+        return encode(value, null, isRoot);
     }
 
-    private Object encode(@Nullable Object value, @Nullable NestedDocument annotation) throws CBLMapperClassException {
+    private Object encode(@Nullable Object value, @Nullable NestedDocument annotation) {
+        return encode(value, annotation, false);
+    }
 
+    private Object encode(@Nullable Object value, @Nullable NestedDocument annotation, boolean isRoot) throws CBLMapperClassException {
+        if (value == null ||
+            value == RemovedValue.INSTANCE ||
+            value instanceof String ||
+            value instanceof Number ||
+            value instanceof Boolean ||
+            value instanceof Blob) {
+            return value;
+        }
         if (value == null || value == RemovedValue.INSTANCE) {
             return null;
-        } else if (value instanceof CBLDocument) {
-            return encodeCBLDocument(value, annotation);
+        } else if (value instanceof CBLDocument && !isRoot && annotation == null) {
+            return ((CBLDocument) value).getDocumentID();
         } else if (value != null && value.getClass().isEnum()) {
             return encodeEnumValue((Enum) value);
         } else if (value instanceof Dictionary) {
@@ -134,17 +203,8 @@ public class CBLMapper {
             return encodeList((List) value, annotation);
         } else if (value instanceof Date) {
             return DateUtils.toJson((Date) value);
-        } else {
-            if (!(value == null ||
-                  value == RemovedValue.INSTANCE ||
-                  value instanceof String ||
-                  value instanceof Number ||
-                  value instanceof Boolean ||
-                  value instanceof Blob)) {
-                throw new UnhandledTypeException(value.getClass());
-            }
         }
-        return value;
+        return encodeObject(value, annotation);
     }
 
     private <T extends Enum<T>> String encodeEnumValue(T enumValue) {
@@ -163,11 +223,17 @@ public class CBLMapper {
         Class typeOfT = field.getType();
         if (value == null || value == RemovedValue.INSTANCE) {
             result = null;
-        }
-        else if (List.class.isAssignableFrom(typeOfT)) {
+        } else if (List.class.isAssignableFrom(typeOfT)) {
             result = decodeCBLList((List) value, field);
         } else if (CBLDocument.class.isAssignableFrom(typeOfT)) {
-            result = decodeCBLDocument((Map<String, Object>) value, typeOfT);
+            NestedDocument nestedAnnotation = field.getAnnotation(NestedDocument.class);
+            if (nestedAnnotation != null) {
+                result = decodeObject((Map<String, Object>) value, typeOfT);
+            } else {
+                result = instanciateObject(typeOfT);
+                ((CBLDocument) result).setDocumentID((String) value);
+            }
+            ((CBLDocument) result).setCBLMapper(this);
         } else if (Enum.class.isAssignableFrom(typeOfT)) {
             result = decodeEnum((String) value, typeOfT);
         } else if (typeOfT.equals(Date.class)) {
@@ -192,7 +258,7 @@ public class CBLMapper {
                     if (enumAnnotation.value().equals(value)) {
                         return enumValue;
                     }
-                } else if (enumValue.name().equals(value)){
+                } else if (enumValue.name().equals(value)) {
                     return enumValue;
                 }
             } catch (NoSuchFieldException e) {
@@ -202,24 +268,35 @@ public class CBLMapper {
         return null;
     }
 
-    private <T> T decode(@Nullable Object value, @NonNull Class<T> typeOfT) throws CBLMapperClassException {
-        if (value != null && CBLDocument.class.isAssignableFrom(typeOfT)) {
-            return decodeCBLDocument((Map<String, Object>) value, typeOfT);
-        }
-        if (typeOfT.equals(Date.class)) {
-            return typeOfT.cast(DateUtils.fromJson((String) value));
-        }
+    private <T> T decode(@Nullable Object value, @NonNull Class typeOfT, boolean isRoot, @Nullable NestedDocument nestedAnnotation) throws
+                                                                                                                                    CBLMapperClassException {
+
+        Object result;
         if (value == null || value == RemovedValue.INSTANCE) {
-            return null;
+            result = null;
+        } else if (CBLDocument.class.isAssignableFrom(typeOfT)) {
+            if (isRoot || nestedAnnotation != null) {
+                result = decodeObject((Map<String, Object>) value, typeOfT);
+            } else {
+                result = instanciateObject(typeOfT);
+                ((CBLDocument) result).setDocumentID((String) value);
+            }
+            ((CBLDocument) result).setCBLMapper(this);
+
+        } else if (Enum.class.isAssignableFrom(typeOfT)) {
+            result = decodeEnum((String) value, (Class<Enum>) typeOfT);
+        } else if (typeOfT.equals(Date.class)) {
+            result = (T) typeOfT.cast(DateUtils.fromJson((String) value));
+        } else if (Primitives.isPrimitive(value.getClass()) ||
+                   value instanceof String ||
+                   value instanceof Number ||
+                   value instanceof Boolean ||
+                   value instanceof Blob) {
+            result = value;
+        } else {
+            result = decodeObject((Map<String, Object>) value, typeOfT);
         }
-        if (Primitives.isPrimitive(value.getClass()) ||
-            value instanceof String ||
-            value instanceof Number ||
-            value instanceof Boolean ||
-            value instanceof Blob) {
-            return (T) value;
-        }
-        throw new UnhandledTypeException(value.getClass());
+        return (T) result;
     }
 
     private <T> T decodeCBLList(List value, Field typeOfT) throws CBLMapperClassException {
@@ -240,44 +317,60 @@ public class CBLMapper {
         }
 
         for (Object item : value) {
-            result.add(decode(item, itemClass));
+            result.add(decode(item, itemClass, false, typeOfT.getAnnotation(NestedDocument.class)));
         }
         return (T) result;
     }
 
-    private <T> T decodeCBLDocument(@Nullable Map<String, Object> value, @NonNull Class<T> typeOfT) throws CBLMapperClassException {
+    private Object instanciateObject(@NonNull Class typeOfT) {
+        Object object = null;
+        try {
+            object = typeOfT.newInstance();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+            throw new CBLMapperClassException(typeOfT, "Verify constructor with no argument is public");
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+            throw new CBLMapperClassException(typeOfT,
+                                              "Type might be an abstract class, an interface, an array class, a primitive type, or void. " +
+                                              "Verify class contains a public constructor with no argument");
+        }
+        return object;
+    }
+
+    private <T> T decodeObject(@Nullable Map<String, Object> value, @NonNull Class<T> typeOfT) throws CBLMapperClassException {
+        T object = (T) instanciateObject(typeOfT);
+        return decodeObject(value, object);
+    }
+
+    private <T> T decodeObject(@Nullable Map<String, Object> value, @NonNull T instanceOfT) throws CBLMapperClassException {
         if (value == null) {
             return null;
         }
-
-        T object = null;
-        try {
-            object = (T) typeOfT.newInstance();
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        } catch (InstantiationException e) {
-            e.printStackTrace();
-        }
-
-        for (Field field : FieldHelper.getFieldsUpTo(object.getClass(), Object.class)) {
+        for (Field field : FieldHelper.getFieldsUpTo(instanceOfT.getClass(), Object.class)) {
             DocumentField documentFieldAnnotation = field.getAnnotation(DocumentField.class);
             if (documentFieldAnnotation != null && !documentFieldAnnotation.ID()) {
                 String fieldName = TextUtils.isEmpty(documentFieldAnnotation.fieldName()) ? field.getName() : documentFieldAnnotation.fieldName();
 
                 // Force access private members
-                if (!field.isAccessible()) {
+                boolean isPrivate = !field.isAccessible();
+                if (isPrivate) {
                     field.setAccessible(true);
                 }
 
                 try {
-                    field.set(object, decode(value.get(fieldName), field));
+                    field.set(instanceOfT, decode(value.get(fieldName), field));
                 } catch (IllegalAccessException e) {
                     e.printStackTrace();
+                }
+
+                if (isPrivate) {
+                    field.setAccessible(false);
                 }
             }
         }
 
-        return object;
+        return instanceOfT;
     }
 
     private Object encodeList(@Nullable List<Object> value, @Nullable NestedDocument annotation) throws CBLMapperClassException {
@@ -304,11 +397,11 @@ public class CBLMapper {
     }
 
 
-    private Map<String, Object> encodeCBLDocument(@Nullable Object value) throws CBLMapperClassException {
-        return encodeCBLDocument(value, null);
+    private Map<String, Object> encodeObject(@Nullable Object value) throws CBLMapperClassException {
+        return encodeObject(value, null);
     }
 
-    private Map<String, Object> encodeCBLDocument(@Nullable Object value, @Nullable NestedDocument parentAnnotation) throws CBLMapperClassException {
+    private Map<String, Object> encodeObject(@Nullable Object value, @Nullable NestedDocument parentAnnotation) throws CBLMapperClassException {
         if (value == null) {
             return null;
         }

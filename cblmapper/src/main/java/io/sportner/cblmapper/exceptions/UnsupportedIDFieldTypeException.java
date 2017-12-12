@@ -6,12 +6,12 @@ package io.sportner.cblmapper.exceptions;
 
 public class UnsupportedIDFieldTypeException extends CBLMapperClassException {
 
-    public UnsupportedIDFieldTypeException(Class unsupportedClass) {
-        super(unsupportedClass);
+    public UnsupportedIDFieldTypeException(Class unhandledClass) {
+        super(unhandledClass);
     }
 
     @Override
     public String getMessage() {
-        return String.format("'%s' must use a String as ID field");
+        return String.format("'%s' must use a String as ID field", getExceptionClass());
     }
 }

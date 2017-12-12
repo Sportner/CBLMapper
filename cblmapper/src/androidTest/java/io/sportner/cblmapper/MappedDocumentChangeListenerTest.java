@@ -21,7 +21,6 @@ import org.junit.runner.RunWith;
 public class MappedDocumentChangeListenerTest {
 
     public static class Pet extends CBLDocument {
-
         String name;
     }
 
@@ -45,11 +44,5 @@ public class MappedDocumentChangeListenerTest {
 
     @Test
     public void testAbstract() {
-        new CBLDocumentChangeListener<Pet>(mDatabase, new CBLMapper(), Pet.class) {
-            @Override
-            public void onDocumentChange(DocumentChange change, Pet object) {
-
-            }
-        };
     }
 }

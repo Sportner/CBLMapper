@@ -76,7 +76,7 @@ public class CBLMapperTest {
     public void testIDSerialization() throws Exception {
         SimplePet cat = new SimplePet();
         final String PET_ID = "Nina";
-        cat.setID(PET_ID);
+        cat.setDocumentID(PET_ID);
 
         CBLMapper mapper = new CBLMapper();
         Document catDocument = mapper.toDocument(cat);
@@ -95,7 +95,7 @@ public class CBLMapperTest {
         Document catDocument = mapper.toDocument(cat);
 
         assertNotNull(catDocument);
-        assertEquals(catDocument.getString(SimplePet.FIELD_NAME), PET_NAME);
+        assertEquals(PET_NAME, catDocument.getString(SimplePet.FIELD_NAME));
     }
 
     @Test
@@ -419,6 +419,65 @@ public class CBLMapperTest {
         assertEquals(aDate, date);
     }
 
+    @Test
+    public void testEnumList() throws Exception {
+        Box box = new Box();
+
+        box.addSpecy(Species.Cat);
+        box.addSpecy(Species.Dog);
+
+        CBLMapper mapper = new CBLMapper();
+
+        Document doc = mapper.toDocument(box);
+
+        Box unserializedBox = mapper.fromDocument(doc, Box.class);
+
+        assertEquals(2, unserializedBox.getSpecies().size());
+        assertEquals(Species.Cat, unserializedBox.getSpecies().get(0));
+        assertEquals(Species.Dog, unserializedBox.getSpecies().get(1));
+    }
+
+    @Test
+    public void testSerializeForeignDoc() throws Exception {
+        Song firstSong = new Song("aaa", "First song");
+        Song secondSong = new Song("bbb", "Second song");
+
+        List<Song> songList = new ArrayList<>();
+        songList.add(firstSong);
+        songList.add(secondSong);
+
+        Album album = new Album("xxx", songList);
+
+        CBLMapper mapper = new CBLMapper();
+        Document doc = mapper.toDocument(album);
+
+        assertNotNull(doc.getArray(Album.FIELD_SONG_LIST));
+        assertEquals("aaa", doc.getArray(Album.FIELD_SONG_LIST).getString(0));
+        assertEquals("bbb", doc.getArray(Album.FIELD_SONG_LIST).getString(1));
+
+        album = mapper.fromDocument(doc, Album.class);
+
+        assertNotNull(album);
+        assertEquals("xxx", album.ID);
+    }
+
+    @Test
+    public void testUnserializeForeignDoc() throws Exception {
+        List<Object> songIDs = new ArrayList<>();
+        songIDs.add("aaa");
+        songIDs.add("bbb");
+
+        Document doc = new Document();
+        doc.setArray(Album.FIELD_SONG_LIST, new Array(songIDs));
+
+        CBLMapper mapper = new CBLMapper();
+        Album album = mapper.fromDocument(doc, Album.class);
+
+        assertNotNull(album.SongList);
+        assertEquals("aaa", album.SongList.get(0).getDocumentID());
+        assertEquals("bbb", album.SongList.get(1).getDocumentID());
+    }
+
     public static class BasicTypes extends CBLDocument {
 
         public static final String FIELD_BLOB = "blob";
@@ -530,14 +589,14 @@ public class CBLMapperTest {
         @DocumentField(fieldName = FIELD_ID, ID = true)
         String mID;
 
-        @NestedDocument
+        @NestedDocument()
         @DocumentField(fieldName = FIELD_BASIC_TYPES)
         BasicTypes mBasicTypes;
 
         public NestedType() {}
 
         public NestedType(String id, BasicTypes aBasics) {
-            mID = id;
+            setDocumentID(id);
             mBasicTypes = aBasics;
         }
 
@@ -602,6 +661,7 @@ public class CBLMapperTest {
 
         private static final String FIELD_LIST = "lists";
 
+        @NestedDocument
         @DocumentField(fieldName = FIELD_LIST)
         ArrayList<BasicTypes> mBasicTypesList;
 
@@ -627,7 +687,7 @@ public class CBLMapperTest {
         BasicTypes mBasicTypes2;
 
         public OmitNestedTypeFields(String id, BasicTypes aBasics, BasicTypes aBasics2) {
-            mID = id;
+            setDocumentID(id);
             mBasicTypes = aBasics;
             mBasicTypes2 = aBasics2;
         }
@@ -660,6 +720,67 @@ public class CBLMapperTest {
 
         @DocumentField(fieldName = FIELD_SPECY)
         public Species mSpecy;
+    }
+
+    public static class Box extends CBLDocument {
+
+        public static final String FIELD_SPECIES = "species";
+
+        @DocumentField(fieldName = FIELD_SPECIES)
+        public List<Species> mSpecies;
+
+        public Box() {
+            mSpecies = new ArrayList<>();
+        }
+
+        public void addSpecy(Species specy) {
+            mSpecies.add(specy);
+        }
+
+        public List<Species> getSpecies() {
+            return mSpecies;
+        }
+    }
+
+    public static class Album extends CBLDocument {
+
+        public static final String FIELD_ID = "id";
+        public static final String FIELD_SONG_LIST = "songList";
+
+        @DocumentField(fieldName = FIELD_ID, ID = true)
+        public String ID;
+
+        @DocumentField(fieldName = FIELD_SONG_LIST)
+        public List<Song> SongList;
+
+        public Album() {
+            SongList = new ArrayList<>();
+        }
+
+        public Album(String docID, List<Song> songList) {
+            setDocumentID(docID);
+            SongList = songList;
+        }
+    }
+
+    public static class Song extends CBLDocument {
+
+        public static final String FIELD_ID = "id";
+        public static final String FIELD_TITLE = "title";
+
+        @DocumentField(fieldName = FIELD_ID, ID = true)
+        public String ID;
+
+        @DocumentField(fieldName = FIELD_TITLE)
+        public String Title;
+
+
+        public Song() { }
+
+        public Song(String docId, String title) {
+            setDocumentID(docId);
+            Title = title;
+        }
     }
 
 }

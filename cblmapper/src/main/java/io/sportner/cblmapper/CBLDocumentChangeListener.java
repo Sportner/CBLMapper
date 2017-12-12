@@ -28,11 +28,11 @@ public abstract class CBLDocumentChangeListener<T extends CBLDocument> implement
     @Override
     public void changed(DocumentChange change) {
         try {
-            onDocumentChange(change, mCBLMapper.fromDocument(mDatabase.getDocument(change.getDocumentID()), mType));
+            onDocumentChange(mCBLMapper.fromDocument(mDatabase.getDocument(change.getDocumentID()), mType));
         } catch (CBLMapperClassException e) {
             e.printStackTrace();
         }
     }
 
-    public abstract void onDocumentChange(@NonNull DocumentChange change, @Nullable T object);
+    public abstract void onDocumentChange(@Nullable T object);
 }
