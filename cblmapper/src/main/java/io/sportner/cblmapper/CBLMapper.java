@@ -238,14 +238,14 @@ public class CBLMapper {
             result = decodeEnum((String) value, typeOfT);
         } else if (typeOfT.equals(Date.class)) {
             result = (T) typeOfT.cast(DateUtils.fromJson((String) value));
-        } else if (Primitives.isPrimitive(value.getClass()) ||
+        } else if (Primitives.isPrimitive(typeOfT) ||
                    value instanceof String ||
                    value instanceof Number ||
                    value instanceof Boolean ||
                    value instanceof Blob) {
             result = value;
         } else {
-            throw new UnhandledTypeException(value.getClass());
+            result = decodeObject((Map<String, Object>) value, typeOfT);
         }
         return (T) result;
     }
@@ -270,7 +270,6 @@ public class CBLMapper {
 
     private <T> T decode(@Nullable Object value, @NonNull Class typeOfT, boolean isRoot, @Nullable NestedDocument nestedAnnotation) throws
                                                                                                                                     CBLMapperClassException {
-
         Object result;
         if (value == null || value == RemovedValue.INSTANCE) {
             result = null;
@@ -287,7 +286,7 @@ public class CBLMapper {
             result = decodeEnum((String) value, (Class<Enum>) typeOfT);
         } else if (typeOfT.equals(Date.class)) {
             result = (T) typeOfT.cast(DateUtils.fromJson((String) value));
-        } else if (Primitives.isPrimitive(value.getClass()) ||
+        } else if (Primitives.isPrimitive(typeOfT) ||
                    value instanceof String ||
                    value instanceof Number ||
                    value instanceof Boolean ||
