@@ -221,7 +221,7 @@ public class CBLMapper {
     private <T> T decode(@Nullable Object value, Field field) throws CBLMapperClassException {
         Object result;
         Class typeOfT = field.getType();
-        if (value == null || value == RemovedValue.INSTANCE) {
+        if (value == null) {
             result = null;
         } else if (List.class.isAssignableFrom(typeOfT)) {
             result = decodeCBLList((List) value, field);
@@ -348,7 +348,8 @@ public class CBLMapper {
         }
         for (Field field : FieldHelper.getFieldsUpTo(instanceOfT.getClass(), Object.class)) {
             DocumentField documentFieldAnnotation = field.getAnnotation(DocumentField.class);
-            if (documentFieldAnnotation != null && !documentFieldAnnotation.ID()) {
+
+            if (documentFieldAnnotation != null) {
                 String fieldName = TextUtils.isEmpty(documentFieldAnnotation.fieldName()) ? field.getName() : documentFieldAnnotation.fieldName();
 
                 // Force access private members
