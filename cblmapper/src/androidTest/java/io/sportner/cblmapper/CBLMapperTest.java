@@ -1,14 +1,23 @@
 package io.sportner.cblmapper;
 
+import android.content.Context;
+import android.support.test.InstrumentationRegistry;
 import android.support.test.runner.AndroidJUnit4;
 
 import com.couchbase.lite.Array;
 import com.couchbase.lite.Blob;
 import com.couchbase.lite.Dictionary;
 import com.couchbase.lite.Document;
+import com.couchbase.lite.MutableArray;
+import com.couchbase.lite.MutableDictionary;
+import com.couchbase.lite.MutableDocument;
+import com.jakewharton.threetenabp.AndroidThreeTen;
 
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.threeten.bp.ZonedDateTime;
+import org.threeten.bp.format.DateTimeFormatter;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -28,6 +37,12 @@ import static org.junit.Assert.assertNull;
 // TODO: Swap all `assertEquals` parameters
 @RunWith(AndroidJUnit4.class)
 public class CBLMapperTest {
+
+    @Before
+    public void setup() {
+        Context instrumentationCtx = InstrumentationRegistry.getContext();
+        AndroidThreeTen.init(instrumentationCtx);
+    }
 
     public static class Car extends CBLDocument {
 
@@ -108,7 +123,7 @@ public class CBLMapperTest {
         Document document = mapper.toDocument(car);
 
         assertNotNull(document);
-        assertEquals(document.getInt(Car.FIELD_WHEELS), CAR_WHEELS);
+        assertEquals(CAR_WHEELS, document.getInt(Car.FIELD_WHEELS));
     }
 
     @Test
@@ -122,6 +137,7 @@ public class CBLMapperTest {
         final long aLong = 23456345;
         final Number aNumber = 4567;
         final String aString = "Test string";
+        final ZonedDateTime zonedDateTime = ZonedDateTime.parse("2017-03-28T12:25:38.492+05:30[Asia/Calcutta]");
 
         BasicTypes basicTypes = new BasicTypes(aBlob,
                                                aBoolean,
@@ -131,7 +147,8 @@ public class CBLMapperTest {
                                                anInt,
                                                aLong,
                                                aNumber,
-                                               aString);
+                                               aString,
+                                               zonedDateTime);
         CBLMapper mapper = new CBLMapper();
         Document document = mapper.toDocument(basicTypes);
 
@@ -159,6 +176,7 @@ public class CBLMapperTest {
         final long aLong = 23456345;
         final Number aNumber = 4567;
         final String aString = "Test string";
+        final ZonedDateTime zonedDateTime = ZonedDateTime.parse("2017-03-28T12:25:38.492+05:30[Asia/Calcutta]");
 
         final BasicTypes basicTypes = new BasicTypes(aBlob,
                                                      aBoolean,
@@ -168,7 +186,8 @@ public class CBLMapperTest {
                                                      anInt,
                                                      aLong,
                                                      aNumber,
-                                                     aString);
+                                                     aString,
+                                                     zonedDateTime);
 
         final NestedType nestedType = new NestedType(aNestedID, basicTypes);
         CBLMapper mapper = new CBLMapper();
@@ -203,6 +222,7 @@ public class CBLMapperTest {
         final long aLong = 23456345;
         final Number aNumber = 4567;
         final String aString = "Test string";
+        final ZonedDateTime zonedDateTime = ZonedDateTime.parse("2017-03-28T12:25:38.492+05:30[Asia/Calcutta]");
 
         final BasicTypes basicTypes = new BasicTypes(aBlob,
                                                      aBoolean,
@@ -212,7 +232,8 @@ public class CBLMapperTest {
                                                      anInt,
                                                      aLong,
                                                      aNumber,
-                                                     aString);
+                                                     aString,
+                                                     zonedDateTime);
 
         final BasicTypes basicTypes2 = new BasicTypes(aBlob,
                                                       aBoolean,
@@ -222,7 +243,8 @@ public class CBLMapperTest {
                                                       anInt,
                                                       aLong,
                                                       aNumber,
-                                                      aString);
+                                                      aString,
+                                                      zonedDateTime);
 
         final OmitNestedTypeFields nestedType = new OmitNestedTypeFields(aNestedID, basicTypes, basicTypes2);
         CBLMapper mapper = new CBLMapper();
@@ -241,6 +263,7 @@ public class CBLMapperTest {
         assertEquals(dictionary.getLong(BasicTypes.FIELD_LONG), aLong);
         assertEquals(dictionary.getNumber(BasicTypes.FIELD_NUMBER), aNumber);
         assertEquals(dictionary.getString(BasicTypes.FIELD_STRING), aString);
+        assertEquals(dictionary.getString(BasicTypes.FIELD_ZONED_DATE), zonedDateTime.format(DateTimeFormatter.ISO_ZONED_DATE_TIME));
     }
 
     @Test
@@ -256,7 +279,7 @@ public class CBLMapperTest {
 
     @Test
     public void testUnserializeBasicTypes() throws Exception {
-        Document document = new Document();
+        MutableDocument document = new MutableDocument();
 
         final Blob aBlob = new Blob("text/plain", "Byte array test".getBytes());
         final boolean aBoolean = true;
@@ -288,7 +311,7 @@ public class CBLMapperTest {
     @Test
     public void testUnserializeID() throws Exception {
         final String id = "testID";
-        Document document = new Document(id);
+        MutableDocument document = new MutableDocument(id);
 
         CBLMapper documentMapper = new CBLMapper();
         SimpleModelWithID simpleModelWithID = documentMapper.fromDocument(document, SimpleModelWithID.class);
@@ -303,7 +326,7 @@ public class CBLMapperTest {
         final String name = "Julie";
         final int age = 27;
 
-        Document document = new Document(id);
+        MutableDocument document = new MutableDocument(id);
         document.setString(ChildClass.FIELD_NAME, name);
         document.setInt(ChildClass.FIELD_AGE, age);
 
@@ -330,7 +353,7 @@ public class CBLMapperTest {
         final Number aNumber = 4567;
         final String aString = "Test string";
 
-        Dictionary nestedDic = new Dictionary();
+        MutableDictionary nestedDic = new MutableDictionary();
         nestedDic.setBlob(BasicTypes.FIELD_BLOB, aBlob);
         nestedDic.setBoolean(BasicTypes.FIELD_BOOLEAN, aBoolean);
         nestedDic.setDate(BasicTypes.FIELD_DATE, aDate);
@@ -341,7 +364,7 @@ public class CBLMapperTest {
         nestedDic.setNumber(BasicTypes.FIELD_NUMBER, aNumber);
         nestedDic.setString(BasicTypes.FIELD_STRING, aString);
 
-        Document document = new Document(aNestedID);
+        MutableDocument document = new MutableDocument(aNestedID);
         document.setDictionary(NestedType.FIELD_BASIC_TYPES, nestedDic);
 
         CBLMapper documentMapper = new CBLMapper();
@@ -390,7 +413,7 @@ public class CBLMapperTest {
         final Number aNumber = 4567;
         final String aString = "Test string";
 
-        Dictionary nestedDic = new Dictionary();
+        MutableDictionary nestedDic = new MutableDictionary();
         nestedDic.setBlob(BasicTypes.FIELD_BLOB, aBlob);
         nestedDic.setBoolean(BasicTypes.FIELD_BOOLEAN, aBoolean);
         nestedDic.setDate(BasicTypes.FIELD_DATE, aDate);
@@ -401,8 +424,8 @@ public class CBLMapperTest {
         nestedDic.setNumber(BasicTypes.FIELD_NUMBER, aNumber);
         nestedDic.setString(BasicTypes.FIELD_STRING, aString);
 
-        Document document = new Document();
-        Array array = new Array();
+        MutableDocument document = new MutableDocument();
+        MutableArray array = new MutableArray();
         array.addDictionary(nestedDic);
 
         document.setArray(ListMemberClass.FIELD_LIST, array);
@@ -467,8 +490,8 @@ public class CBLMapperTest {
         songIDs.add("aaa");
         songIDs.add("bbb");
 
-        Document doc = new Document();
-        doc.setArray(Album.FIELD_SONG_LIST, new Array(songIDs));
+        MutableDocument doc = new MutableDocument();
+        doc.setArray(Album.FIELD_SONG_LIST, new MutableArray(songIDs));
 
         CBLMapper mapper = new CBLMapper();
         Album album = mapper.fromDocument(doc, Album.class);
@@ -478,11 +501,74 @@ public class CBLMapperTest {
         assertEquals("bbb", album.SongList.get(1).getDocumentID());
     }
 
+    @Test
+    public void testZonedDatetime() throws Exception {
+
+        final Blob aBlob = new Blob("text/plain", "Byte array test".getBytes());
+        final boolean aBoolean = true;
+        final Date aDate = new Date();
+        final double aDouble = 4.456;
+        final float aFloat = 34.34f;
+        final int anInt = 15;
+        final long aLong = 23456345;
+        final Number aNumber = 4567;
+        final String aString = "Test string";
+//        final ZonedDateTime zonedDateTime = ZonedDateTime.parse("2017-03-28T12:25:38.492+05:30[Asia/Calcutta]");
+        final ZonedDateTime zonedDateTime = null;
+
+        final BasicTypes basicTypes = new BasicTypes(aBlob,
+                                                     aBoolean,
+                                                     aDate,
+                                                     aDouble,
+                                                     aFloat,
+                                                     anInt,
+                                                     aLong,
+                                                     aNumber,
+                                                     aString,
+                                                     zonedDateTime);
+
+        CBLMapper mapper = new CBLMapper();
+        Document document = mapper.toDocument(basicTypes);
+
+        assertEquals(document.getString(BasicTypes.FIELD_ZONED_DATE), null);
+
+        BasicTypes output = mapper.fromDocument(document, BasicTypes.class);
+
+        assertEquals(zonedDateTime, output.mZonedDateTime);
+    }
+
+    @Test
+    public void testBoolean() throws Exception {
+        BooleanType booleanType = new BooleanType(true);
+
+        CBLMapper mapper = new CBLMapper();
+
+        Document document = mapper.toDocument(booleanType);
+
+        BooleanType output = mapper.fromDocument(document, BooleanType.class);
+
+        assertEquals(booleanType.mBoolean, output.mBoolean);
+    }
+
+    public static class BooleanType extends CBLDocument {
+        public static final String FIELD_BOOLEAN = "boolean";
+
+        @DocumentField(fieldName = FIELD_BOOLEAN)
+        Boolean mBoolean;
+
+        public BooleanType(){}
+
+        public BooleanType(boolean aBoolean){
+            mBoolean = aBoolean;
+        }
+    }
+
     public static class BasicTypes extends CBLDocument {
 
         public static final String FIELD_BLOB = "blob";
         public static final String FIELD_BOOLEAN = "boolean";
         public static final String FIELD_DATE = "date";
+        public static final String FIELD_ZONED_DATE = "zoned_date";
         public static final String FIELD_DOUBLE = "double";
         public static final String FIELD_FLOAT = "float";
         public static final String FIELD_INTEGER = "integer";
@@ -517,6 +603,9 @@ public class CBLMapperTest {
         @DocumentField(fieldName = FIELD_STRING)
         String mString;
 
+        @DocumentField(fieldName = FIELD_ZONED_DATE)
+        ZonedDateTime mZonedDateTime;
+
         public BasicTypes() {
         }
 
@@ -528,7 +617,8 @@ public class CBLMapperTest {
                           int anInt,
                           long aLong,
                           Number aNumber,
-                          String aString) {
+                          String aString,
+                          ZonedDateTime zonedDateTime) {
             mBlob = aBlob;
             mBoolean = aBoolean;
             mDate = aDate;
@@ -538,6 +628,7 @@ public class CBLMapperTest {
             mLong = aLong;
             mNumber = aNumber;
             mString = aString;
+            mZonedDateTime = zonedDateTime;
         }
 
         public Blob getBlob() {

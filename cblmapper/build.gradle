@@ -3,14 +3,14 @@ apply plugin: 'com.github.dcendents.android-maven'
 apply plugin: 'com.jfrog.bintray'
 
 android {
-    compileSdkVersion 25
-    buildToolsVersion '26.0.2'
+    compileSdkVersion 27
+    buildToolsVersion '27.0.3'
 
     defaultConfig {
         minSdkVersion 21
-        targetSdkVersion 25
-        versionCode 1
-        versionName "0.2-DB10"
+        targetSdkVersion 27
+        versionCode 2
+        versionName "0.3.1"
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
 
@@ -24,13 +24,14 @@ android {
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
-    androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    androidTestImplementation('com.android.support.test.espresso:espresso-core:2.2.2', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
-    compile 'com.android.support:appcompat-v7:25.3.1'
-    compile 'com.couchbase.lite:couchbase-lite-android:2.0.0-DB020'
-    testCompile 'junit:junit:4.12'
+    implementation 'com.android.support:appcompat-v7:27.1.1'
+    implementation 'com.couchbase.lite:couchbase-lite-android:2.0.0'
+    implementation 'com.jakewharton.threetenabp:threetenabp:1.1.0'
+    testImplementation 'junit:junit:4.12'
 }
 
 
@@ -55,7 +56,7 @@ artifacts {
 }
 
 group = 'io.sportner.cblmapper'
-version = '0.2-DB10'
+version = '0.3.1'
 
 install {
     repositories.mavenInstaller {
@@ -68,7 +69,7 @@ install {
             packaging 'aar'
             groupId 'io.sportner.cblmapper'
             artifactId 'cblmapper'
-            version '0.2-DB10'
+            version '0.3.1'
 
             licenses {
                 license {
@@ -106,10 +107,10 @@ bintray {
         licenses = ['Apache-2.0']
         publish = true
         version {
-            name = '0.2-DB10'
-            desc = '0.1 not stable. Still experimental. List + Enum supports is OK. HashMap coming in the next build'
+            name = '0.3.1'
+            desc = '0.3.1 Supports dictionnary (for query result mapping)'
             released = new Date()
-            vcsTag = '0.2-DB10'
+            vcsTag = '0.3.1-alpha'
         }
     }
 }

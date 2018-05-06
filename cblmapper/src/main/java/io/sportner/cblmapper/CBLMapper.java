@@ -10,9 +10,11 @@ import com.couchbase.lite.CouchbaseLiteException;
 import com.couchbase.lite.Database;
 import com.couchbase.lite.Dictionary;
 import com.couchbase.lite.Document;
-import com.couchbase.lite.ReadOnlyDictionary;
-import com.couchbase.lite.internal.document.RemovedValue;
-import com.couchbase.lite.internal.support.DateUtils;
+import com.couchbase.lite.MutableDocument;
+import com.couchbase.lite.internal.utils.DateUtils;
+
+import org.threeten.bp.ZonedDateTime;
+import org.threeten.bp.format.DateTimeFormatter;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
@@ -27,7 +29,6 @@ import io.sportner.cblmapper.annotations.CBLEnumValue;
 import io.sportner.cblmapper.annotations.DocumentField;
 import io.sportner.cblmapper.annotations.NestedDocument;
 import io.sportner.cblmapper.exceptions.CBLMapperClassException;
-import io.sportner.cblmapper.exceptions.UnhandledTypeException;
 import io.sportner.cblmapper.exceptions.UnsupportedIDFieldTypeException;
 import io.sportner.cblmapper.util.FieldHelper;
 import io.sportner.cblmapper.util.Primitives;
@@ -73,19 +74,21 @@ public class CBLMapper {
         mDatabase.save(toDocument(cblDocument));
     }
 
-    public Document toDocument(@NonNull CBLDocument object) throws CBLMapperClassException {
+    public MutableDocument toDocument(@NonNull CBLDocument object) throws CBLMapperClassException {
         Document doc = object.getDocument();
 
         if (doc == null && mDatabase != null) {
             doc = mDatabase.getDocument(object.getDocumentID());
         }
 
+        MutableDocument mutableDocument;
         if (doc == null) {
-            doc = new Document(object.getDocumentID());
+            mutableDocument = new MutableDocument(object.getDocumentID());
+        } else {
+            mutableDocument = doc.toMutable();
         }
-
-        doc.set((Map<String, Object>) encode(object, true));
-        return doc;
+        mutableDocument.setData((Map<String, Object>) encode(object, true));
+        return mutableDocument;
     }
 
     public <T extends CBLDocument> void load(T instanceOfT) throws CBLMapperClassException {
@@ -104,7 +107,7 @@ public class CBLMapper {
         return fromDocument(mDatabase.getDocument(docID), typeOfT);
     }
 
-    public <T extends CBLDocument> T fromDocument(@Nullable ReadOnlyDictionary dictionary, @NonNull Class<T> typeOfT) throws CBLMapperClassException {
+    public <T extends CBLDocument> T fromDocument(@Nullable Document dictionary, @NonNull Class<T> typeOfT) throws CBLMapperClassException {
         if (dictionary == null) {
             return null;
         }
@@ -121,6 +124,10 @@ public class CBLMapper {
         }
 
         return object;
+    }
+
+    public <T extends CBLDocument> T fromDocument(@Nullable Dictionary dictionary, @NonNull Class<T> typeOfT) throws CBLMapperClassException {
+        return (T)(dictionary != null ? decode(dictionary.toMap(), typeOfT, true, null) : null);
     }
 
     private void setCBLDocumentID(@NonNull CBLDocument cblDocument, @NonNull String docID) {
@@ -180,16 +187,13 @@ public class CBLMapper {
 
     private Object encode(@Nullable Object value, @Nullable NestedDocument annotation, boolean isRoot) throws CBLMapperClassException {
         if (value == null ||
-            value == RemovedValue.INSTANCE ||
             value instanceof String ||
             value instanceof Number ||
             value instanceof Boolean ||
             value instanceof Blob) {
             return value;
         }
-        if (value == null || value == RemovedValue.INSTANCE) {
-            return null;
-        } else if (value instanceof CBLDocument && !isRoot && annotation == null) {
+        if (value instanceof CBLDocument && !isRoot && annotation == null) {
             return ((CBLDocument) value).getDocumentID();
         } else if (value != null && value.getClass().isEnum()) {
             return encodeEnumValue((Enum) value);
@@ -203,14 +207,15 @@ public class CBLMapper {
             return encodeList((List) value, annotation);
         } else if (value instanceof Date) {
             return DateUtils.toJson((Date) value);
+        } else if (value instanceof ZonedDateTime) {
+            return ((ZonedDateTime) value).format(DateTimeFormatter.ISO_ZONED_DATE_TIME);
         }
         return encodeObject(value, annotation);
     }
 
     private <T extends Enum<T>> String encodeEnumValue(T enumValue) {
-        Field field = null;
         try {
-            field = enumValue.getClass().getField(enumValue.name());
+            Field field = enumValue.getClass().getField(enumValue.name());
             CBLEnumValue annotation = field.getAnnotation(CBLEnumValue.class);
             return annotation == null ? enumValue.name() : annotation.value();
         } catch (NoSuchFieldException e) {
@@ -238,6 +243,8 @@ public class CBLMapper {
             result = decodeEnum((String) value, typeOfT);
         } else if (typeOfT.equals(Date.class)) {
             result = (T) typeOfT.cast(DateUtils.fromJson((String) value));
+        } else if (typeOfT.equals(ZonedDateTime.class)) {
+            result = ZonedDateTime.parse((String) value, DateTimeFormatter.ISO_ZONED_DATE_TIME);
         } else if (Primitives.isPrimitive(typeOfT) ||
                    value instanceof String ||
                    value instanceof Number ||
@@ -270,8 +277,11 @@ public class CBLMapper {
 
     private <T> T decode(@Nullable Object value, @NonNull Class typeOfT, boolean isRoot, @Nullable NestedDocument nestedAnnotation) throws
                                                                                                                                     CBLMapperClassException {
+
+        // TODO: Write serializer/deserializer interface + implements it for common types
+
         Object result;
-        if (value == null || value == RemovedValue.INSTANCE) {
+        if (value == null) {
             result = null;
         } else if (CBLDocument.class.isAssignableFrom(typeOfT)) {
             if (isRoot || nestedAnnotation != null) {
@@ -361,6 +371,8 @@ public class CBLMapper {
                 try {
                     field.set(instanceOfT, decode(value.get(fieldName), field));
                 } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                } catch (IllegalArgumentException e) {
                     e.printStackTrace();
                 }
 
