@@ -11,6 +11,7 @@ import com.couchbase.lite.Database;
 import com.couchbase.lite.Dictionary;
 import com.couchbase.lite.Document;
 import com.couchbase.lite.MutableDocument;
+import com.couchbase.lite.Result;
 import com.couchbase.lite.internal.utils.DateUtils;
 
 import org.threeten.bp.ZonedDateTime;
@@ -127,6 +128,10 @@ public class CBLMapper {
     }
 
     public <T extends CBLDocument> T fromDocument(@Nullable Dictionary dictionary, @NonNull Class<T> typeOfT) throws CBLMapperClassException {
+        return (T)(dictionary != null ? decode(dictionary.toMap(), typeOfT, true, null) : null);
+    }
+
+    public <T extends CBLDocument> T fromDocument(@Nullable Result dictionary, @NonNull Class<T> typeOfT) throws CBLMapperClassException {
         return (T)(dictionary != null ? decode(dictionary.toMap(), typeOfT, true, null) : null);
     }
 
