@@ -1,122 +1,120 @@
 package io.sportner.cblmapper;
 
 import android.support.annotation.Nullable;
-
 import com.couchbase.lite.CouchbaseLiteException;
 import com.couchbase.lite.Document;
-
-import java.lang.reflect.Field;
-
 import io.sportner.cblmapper.annotations.DocumentField;
 import io.sportner.cblmapper.exceptions.UnsupportedIDFieldTypeException;
 import io.sportner.cblmapper.util.FieldHelper;
-
-/**
- * Created by alblanc on 15/09/2017.
- */
+import java.lang.reflect.Field;
+import java.util.Iterator;
 
 public class CBLDocument {
-
     private transient Document mDocument;
     private transient CBLMapper mCBLMapper;
     private transient String mDocumentID;
 
-    public CBLDocument() { }
+    public CBLDocument() {
+    }
 
     public CBLDocument(@Nullable String documentID) {
-        init(documentID, null);
+        this.init(documentID, (CBLMapper)null);
     }
 
     public CBLDocument(@Nullable CBLMapper cblMapper) {
-        init(null, cblMapper);
+        this.init((String)null, cblMapper);
     }
 
     public CBLDocument(@Nullable String documentID, @Nullable CBLMapper cblMapper) {
-        init(documentID, cblMapper);
+        this.init(documentID, cblMapper);
     }
 
     private void init(@Nullable String documentID, @Nullable CBLMapper cblMapper) {
-        mCBLMapper = cblMapper;
-        setDocumentID(documentID);
+        this.mCBLMapper = cblMapper;
+        this.setDocumentID(documentID);
     }
 
     public Document getDocument() {
-        return mDocument;
+        return this.mDocument;
     }
 
     public void setDocument(Document document) {
-        setDocumentID(document.getId());
-        mDocument = document;
+        this.setDocumentID(document.getId());
+        this.mDocument = document;
     }
 
     public void setCBLMapper(CBLMapper mapper) {
-        mCBLMapper = mapper;
+        this.mCBLMapper = mapper;
     }
 
     public CBLMapper getCBLMapper() {
-        return mCBLMapper;
+        return this.mCBLMapper;
     }
 
     public void setDocumentID(String documentID) {
-        mDocumentID = documentID;
-        mDocument = null;
-        // Inject Document ID into CBLDocument attributes with annotation @DocumentField(ID=true)
-        for (Field field : FieldHelper.getFieldsUpTo(this.getClass(), Object.class)) {
-            DocumentField documentFieldAnnotation = field.getAnnotation(DocumentField.class);
+        this.mDocumentID = documentID;
+        this.mDocument = null;
+        Iterator var2 = FieldHelper.getFieldsUpTo(this.getClass(), Object.class).iterator();
+
+        while(var2.hasNext()) {
+            Field field = (Field)var2.next();
+            DocumentField documentFieldAnnotation = (DocumentField)field.getAnnotation(DocumentField.class);
             if (documentFieldAnnotation != null && documentFieldAnnotation.ID()) {
-                if (field.getType() == String.class) {
-                    try {
-                        boolean isPrivate = !field.isAccessible();
-                        if (isPrivate) {
-                            field.setAccessible(true);
-                        }
-                        field.set(this, documentID);
-                        if (isPrivate) {
-                            field.setAccessible(false);
-                        }
-                    } catch (IllegalAccessException e) {
-                        // Ignore as it can't happen
-                    }
-                    break;
-                } else {
+                if (field.getType() != String.class) {
                     throw new UnsupportedIDFieldTypeException(this.getClass());
                 }
+
+                try {
+                    boolean isPrivate = !field.isAccessible();
+                    if (isPrivate) {
+                        field.setAccessible(true);
+                    }
+
+                    field.set(this, documentID);
+                    if (isPrivate) {
+                        field.setAccessible(false);
+                    }
+                } catch (IllegalAccessException var6) {
+                    ;
+                }
+                break;
             }
         }
+
     }
 
     public String getDocumentID() {
-        return mDocumentID;
+        return this.mDocumentID;
     }
 
     public void delete() throws CouchbaseLiteException {
-        if (mCBLMapper == null || mCBLMapper.getDatabase() == null) {
-            throw new IllegalStateException("You must attach a mapper with an opened database connection to this document");
-        }
-        if (mDocument == null) {
-            mDocument = getCBLMapper().getDatabase().getDocument(mDocumentID);
-        }
+        if (this.mCBLMapper != null && this.mCBLMapper.getDatabase() != null) {
+            if (this.mDocument == null) {
+                this.mDocument = this.getCBLMapper().getDatabase().getDocument(this.mDocumentID);
+            }
 
-        if (mDocument != null) {
-            getCBLMapper().getDatabase().delete(mDocument);
+            if (this.mDocument != null) {
+                this.getCBLMapper().getDatabase().delete(this.mDocument);
+            }
+
+        } else {
+            throw new IllegalStateException("You must attach a mapper with an opened database connection to this document");
         }
     }
 
     public void load() {
-        getCBLMapper().load(this);
+        this.getCBLMapper().load(this);
     }
 
     public void save() throws CouchbaseLiteException {
-        save(true);
+        this.save(true);
     }
 
     public void save(boolean saveChildren) throws CouchbaseLiteException {
-        if (mCBLMapper == null || mCBLMapper.getDatabase() == null) {
+        if (this.mCBLMapper != null && this.mCBLMapper.getDatabase() != null) {
+            this.mCBLMapper.save(this);
+        } else {
             throw new IllegalStateException("You must attach a mapper with a opened database connection to this document");
         }
-
-        // TODO: Traverse through children to save them before saving root instance (eg: this)
-
-        mCBLMapper.save(this);
     }
 }
