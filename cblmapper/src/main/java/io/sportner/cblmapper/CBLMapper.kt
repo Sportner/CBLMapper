@@ -2,7 +2,6 @@ package io.sportner.cblmapper
 
 import com.couchbase.lite.*
 import io.sportner.cblmapper.exceptions.CBLMapperClassException
-import io.sportner.cblmapper.exceptions.UnhandledTypeException
 import io.sportner.cblmapper.mappers.*
 import java.util.*
 import kotlin.collections.ArrayList
@@ -94,7 +93,7 @@ class CBLMapper() {
             }
             value is Blob -> value
             else -> {
-                throw UnhandledTypeException(value.javaClass)
+                (adapterMap[Any::class.java.kotlin]!! as CBLMTypeAdapter<Any>).encode(value, typeOfT as KClass<Any>, typesParameter, CBLMapperEncoderContext(this))
             }
         }
     }
@@ -112,7 +111,7 @@ class CBLMapper() {
             typeOfT.isSubclassOf(Enum::class) -> (adapterMap[Enum::class.java.kotlin]!! as CBLMTypeAdapter<Any>).decode(value, typeOfT as KClass<Any>, null, CBLMapperDecoderContext(this))
             adapterMap.containsKey(typeOfT) -> (adapterMap[typeOfT]!! as CBLMTypeAdapter<Any>).decode(value, typeOfT as KClass<Any>, typesParameter, CBLMapperDecoderContext(this))
             typeOfT == Blob::class -> value
-            else -> throw  UnhandledTypeException(typeOfT)
+            else -> (adapterMap[Any::class.java.kotlin]!! as CBLMTypeAdapter<Any>).decode(value, typeOfT as KClass<Any>, typesParameter, CBLMapperDecoderContext(this))
         }
 
         return if (returnValue != null) typeOfT.cast(returnValue) else null
