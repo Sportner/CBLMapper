@@ -1,9 +1,11 @@
 package io.sportner.cblmapper.exceptions
 
-open class CBLMapperClassException(protected val exceptionClass: Class<*>,
+import java.lang.reflect.Type
+
+open class CBLMapperClassException(protected val exceptionClass: Type,
                                    protected val description: String) : RuntimeException() {
 
     override fun toString(): String {
-        return String.format("CBLMapperClassException for class '%s': %s", this.exceptionClass, this.description)
+        return String.format("CBLMapperClassException for class '%s': %s", this.exceptionClass.toString(), this.description)
     }
 }

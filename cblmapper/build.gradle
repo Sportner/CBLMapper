@@ -16,7 +16,6 @@ android {
         versionName "0.3.1-1"
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
-
     }
     buildTypes {
         release {
@@ -28,13 +27,12 @@ android {
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-
+    implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     androidTestImplementation('com.android.support.test.espresso:espresso-core:2.2.2', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
     implementation 'com.android.support:support-annotations:28.0.0'
     implementation 'com.couchbase.lite:couchbase-lite-android:2.1.0'
-    implementation 'com.jakewharton.threetenabp:threetenabp:1.1.0'
     testImplementation 'junit:junit:4.12'
 }
 
@@ -45,8 +43,8 @@ task sourcesJar(type: Jar) {
 }
 
 task javadoc(type: Javadoc) {
-    source = android.sourceSets.main.java.srcDirs
-    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+//    source = android.sourceSets.main.java.srcDirs
+//    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
 }
 
 task javadocJar(type: Jar, dependsOn: javadoc) {
@@ -60,7 +58,7 @@ artifacts {
 }
 
 group = 'io.sportner.cblmapper'
-version = '0.3.1-1'
+version = '0.4'
 
 install {
     repositories.mavenInstaller {
@@ -73,7 +71,7 @@ install {
             packaging 'aar'
             groupId 'io.sportner.cblmapper'
             artifactId 'cblmapper'
-            version '0.3.1-1'
+            version '0.4'
 
             licenses {
                 license {
@@ -111,10 +109,10 @@ bintray {
         licenses = ['Apache-2.0']
         publish = true
         version {
-            name = '0.3.1-1'
-            desc = '0.3.1-1 Supports result (for query result mapping)'
+            name = '0.4'
+            desc = 'The library has been completely rewritten in Kotlin. You can now register type adapter to handle custom types'
             released = new Date()
-            vcsTag = '0.3.1-1-alpha'
+            vcsTag = '0.4'
         }
     }
 }
