@@ -19,6 +19,9 @@ class ObjectDefaultTypeAdapter : CBLMTypeAdapter<Any> {
             val instanceOfT = typeOfT.createInstance()
 
             for (property in typeOfT.memberProperties) {
+                if (property.findAnnotation<Transient>() != null) {
+                    continue
+                }
                 (property as? KMutableProperty1<Any, Any>)?.let { mutableProperty ->
                     context.decode(map[getPropertySerializedName(property)], property.returnType.jvmErasure, property.returnType.arguments)?.let { propertyValue ->
                         mutableProperty.set(instanceOfT, propertyValue)
@@ -35,6 +38,9 @@ class ObjectDefaultTypeAdapter : CBLMTypeAdapter<Any> {
         val map = HashMap<String, Any>()
 
         for (property in value.javaClass.kotlin.memberProperties) {
+            if (property.findAnnotation<Transient>() != null) {
+                continue
+            }
             context.encode(property.get(value), property.returnType.jvmErasure, property.returnType.arguments)?.let {
                 map[getPropertySerializedName(property)] = it
             }
