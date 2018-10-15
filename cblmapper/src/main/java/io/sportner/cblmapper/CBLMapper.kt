@@ -40,11 +40,21 @@ class CBLMapper() {
     }
 
     @Throws(CBLMapperClassException::class, CouchbaseLiteException::class)
+    fun <T : ICBLDocument> load(documentID: String, typeOfT: KClass<T>): T? {
+        this.database?.let {
+            return fromDocument(it.getDocument(documentID), typeOfT)
+        } ?: run {
+            throw IllegalStateException("You must attach a database in order to save documents")
+        }
+    }
+
+    @Throws(CBLMapperClassException::class, CouchbaseLiteException::class)
     fun save(cblDocument: CBLDocument) {
-        this.database?.save(this.toDocument(cblDocument))
-                ?: run {
-                    throw IllegalStateException("You must attach a database in order to save documents")
-                }
+        this.database?.let {
+            it.save(this.toDocument(cblDocument))
+        } ?: run {
+            throw IllegalStateException("You must attach a database in order to save documents")
+        }
     }
 
     @Suppress("UNCHECKED_CAST")
