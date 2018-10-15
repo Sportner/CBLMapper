@@ -1,6 +1,7 @@
 package io.sportner.cblmapper
 
 import com.couchbase.lite.*
+import com.couchbase.lite.Dictionary
 import io.sportner.cblmapper.exceptions.CBLMapperClassException
 import io.sportner.cblmapper.mappers.*
 import java.util.*
@@ -83,6 +84,11 @@ class CBLMapper() {
             }
             mappedInstance
         }
+    }
+
+    @Throws(CBLMapperClassException::class)
+    fun <T : Any> fromDictionnary(document: Dictionary?, classOfT: KClass<T>): T? {
+        return if (document == null) null else this.decode(document.toMap(), classOfT, null)
     }
 
     @Suppress("UNCHECKED_CAST")

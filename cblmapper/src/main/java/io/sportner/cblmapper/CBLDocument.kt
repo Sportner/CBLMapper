@@ -8,9 +8,10 @@ interface ICBLDocument {
 }
 
 open class CBLDocument : ICBLDocument {
-    @Transient
+
     override var documentID: String? = null
 
+    @Transient
     override var document: Document? = null
         set(document) {
             this.documentID = document?.id

@@ -13,7 +13,7 @@ android {
         minSdkVersion 21
         targetSdkVersion 28
         versionCode 2
-        versionName "0.4-2"
+        versionName "0.4-3"
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
@@ -58,7 +58,7 @@ artifacts {
 }
 
 group = 'io.sportner.cblmapper'
-version = '0.4-2'
+version = '0.4-3'
 
 install {
     repositories.mavenInstaller {
@@ -71,7 +71,7 @@ install {
             packaging 'aar'
             groupId 'io.sportner.cblmapper'
             artifactId 'cblmapper'
-            version '0.4-2'
+            version '0.4-3'
 
             licenses {
                 license {
@@ -109,10 +109,10 @@ bintray {
         licenses = ['Apache-2.0']
         publish = true
         version {
-            name = '0.4-2'
+            name = '0.4-3'
             desc = 'The library has been completely rewritten in Kotlin. You can now register type adapter to handle custom types'
             released = new Date()
-            vcsTag = '0.4-2'
+            vcsTag = '0.4-3'
         }
     }
 }
